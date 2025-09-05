@@ -4,6 +4,39 @@ import logo from "./img/logo.png";
 export default function Navbar({ setIsAuthModalOpen }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const smoothScrollTo = (elementId) => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      const targetPosition = element.offsetTop - 80; // Account for fixed navbar height
+      const startPosition = window.pageYOffset;
+      const distance = targetPosition - startPosition;
+      const duration = Math.abs(distance) > 1000 ? 1200 : 800; // Longer duration for longer distances
+      
+      let start = null;
+      
+      const step = (timestamp) => {
+        if (!start) start = timestamp;
+        const progress = timestamp - start;
+        const progressRatio = Math.min(progress / duration, 1);
+        
+        // Easing function for smoother animation (ease-in-out)
+        const easeInOutCubic = progressRatio < 0.5
+          ? 4 * progressRatio * progressRatio * progressRatio
+          : (progressRatio - 1) * (2 * progressRatio - 2) * (2 * progressRatio - 2) + 1;
+        
+        window.scrollTo(0, startPosition + (distance * easeInOutCubic));
+        
+        if (progress < duration) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      
+      window.requestAnimationFrame(step);
+      // Close mobile menu after clicking
+      setIsOpen(false);
+    }
+  };
+
   const navLinks = [
     "Home",
     "Features",
@@ -31,13 +64,13 @@ export default function Navbar({ setIsAuthModalOpen }) {
           {/* Desktop Menu */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
+              <button
                 key={link}
-                href={`#${link.toLowerCase().replace(/\s+/g, "-")}`}
+                onClick={() => smoothScrollTo(link.toLowerCase().replace(/\s+/g, "-"))}
                 className="relative text-gray-800 font-medium transition-colors hover:text-[#46bfe2] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#46bfe2] after:transition-all hover:after:w-full"
               >
                 {link}
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -98,13 +131,13 @@ export default function Navbar({ setIsAuthModalOpen }) {
       {isOpen && (
         <div className="md:hidden bg-white px-6 py-4 space-y-4 shadow-md">
           {navLinks.map((link) => (
-            <a
+            <button
               key={link}
-              href={`#${link.toLowerCase().replace(/\s+/g, "-")}`}
-              className="relative block text-gray-800 font-medium transition-colors hover:text-[#46bfe2] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#46bfe2] after:transition-all hover:after:w-full"
+              onClick={() => smoothScrollTo(link.toLowerCase().replace(/\s+/g, "-"))}
+              className="relative block text-gray-800 font-medium transition-colors hover:text-[#46bfe2] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#46bfe2] after:transition-all hover:after:w-full w-full text-left"
             >
               {link}
-            </a>
+            </button>
           ))}
           <div className="flex flex-col gap-3 mt-4">
             <button className="px-4 py-2 rounded-2xl text-white bg-[#46bfe2] hover:opacity-90 transition">

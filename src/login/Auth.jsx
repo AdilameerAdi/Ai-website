@@ -21,7 +21,7 @@ export default function AuthModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-lg relative">
         {/* Close Button */}
         <button
@@ -135,9 +135,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
         {/* Roadmap apps info for new signup */}
         {!isLogin && (
-          <div className="mt-4 text-gray-500 text-sm text-center">
-            After signup, you'll get basic access to ConsecDesk, ConsecDrive, ConsecQuote.<br />
-            Roadmap apps appear as "Coming Soon" with "Notify Me".
+          <div className="text-gray-500 text-sm text-center">
           </div>
         )}
       </div>
