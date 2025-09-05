@@ -6,7 +6,7 @@ export default function HowItWorks() {
       step: "Step 1",
       title: "Sign Up & Log In",
       text: "Create your account and access the platform instantly.",
-      icon: <FaUserPlus className="h-10 w-10 text-blue-600" />,
+      icon: <FaUserPlus className="h-10 w-10 text-[#14B8A6]" />,
     },
     {
       step: "Step 2",
@@ -18,7 +18,7 @@ export default function HowItWorks() {
       step: "Step 3",
       title: "Upgrade for More",
       text: "Unlock advanced storage, AI power, and team collaboration with premium plans.",
-      icon: <FaArrowUp className="h-10 w-10 text-indigo-600" />,
+      icon: <FaArrowUp className="h-10 w-10 text-[#14B8A6]" />,
     },
     {
       step: "Step 4",
@@ -34,7 +34,7 @@ export default function HowItWorks() {
         
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             How It Works
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -50,13 +50,13 @@ export default function HowItWorks() {
               className="p-6 rounded-xl shadow-md border border-gray-100 bg-gray-50 hover:shadow-lg transition text-center"
             >
               {/* Icon */}
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-teal-50 mx-auto mb-4">
                 {item.icon}
               </div>
               {/* Step Number */}
-              <p className="text-sm font-medium text-blue-600">{item.step}</p>
+              <p className="text-sm font-medium text-[#14B8A6]">{item.step}</p>
               {/* Title */}
-              <h3 className="mt-2 text-xl font-semibold text-blue-800">
+              <h3 className="mt-2 text-xl font-semibold text-[#14B8A6]">
                 {item.title}
               </h3>
               {/* Description */}

@@ -23,13 +23,13 @@ export default function FeedbackForm() {
   };
 
   return (
-    <section className="bg-gradient-to-b from-blue-50 to-white py-20" id="feedback">
+    <section className="bg-gradient-to-b from-teal-50 to-white py-20" id="feedback">
       <div className="max-w-3xl mx-auto px-6">
         
         {/* Heading */}
         <div className="text-center mb-12">
-          <MessageCircle className="mx-auto h-12 w-12 text-blue-600" />
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900 mt-4">
+          <MessageCircle className="mx-auto h-12 w-12 text-[#14B8A6]" />
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mt-4">
             We’d love your feedback
           </h2>
           <p className="mt-2 text-gray-600">
@@ -49,7 +49,7 @@ export default function FeedbackForm() {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
                   placeholder="Your full name"
                 />
               </div>
@@ -61,7 +61,7 @@ export default function FeedbackForm() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
                   placeholder="you@example.com"
                 />
               </div>
@@ -75,14 +75,14 @@ export default function FeedbackForm() {
                 onChange={handleChange}
                 required
                 rows="5"
-                className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-5 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#14B8A6] resize-none"
                 placeholder="Share your thoughts, suggestions, or issues..."
               ></textarea>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl shadow hover:from-blue-700 hover:to-blue-600 transition"
+              className="w-full py-3 bg-gradient-to-r from-[#14B8A6] to-[#14B8A6] text-white font-semibold rounded-xl shadow hover:from-[#0d9488] hover:to-[#14B8A6] transition"
             >
               Submit Feedback
             </button>

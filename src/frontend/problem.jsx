@@ -5,7 +5,7 @@ export default function Problem() {
     {
       title: "Too Many Tools",
       text: "SMEs juggle too many disconnected SaaS tools.",
-      icon: <FaThLarge className="h-10 w-10 text-indigo-600" />, // Indigo = multiple apps/tools
+      icon: <FaThLarge className="h-10 w-10 text-[#14B8A6]" />, // Indigo = multiple apps/tools
     },
     {
       title: "Rising Costs",
@@ -25,7 +25,7 @@ export default function Problem() {
         
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             The Problems SMEs Face
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -41,10 +41,10 @@ export default function Problem() {
               key={index}
               className="p-6 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition text-center"
             >
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 mx-auto mb-4">
                 {problem.icon}
               </div>
-              <h3 className="text-xl font-semibold text-blue-800">
+              <h3 className="text-xl font-semibold text-[#14B8A6]">
                 {problem.title}
               </h3>
               <p className="mt-3 text-gray-600">{problem.text}</p>

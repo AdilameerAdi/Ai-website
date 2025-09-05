@@ -76,7 +76,7 @@ export default function Pricing() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             Pricing Plans
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -93,17 +93,17 @@ export default function Pricing() {
               className={`p-6 rounded-2xl border-3 shadow-md transition cursor-pointer 
                 ${
                   selectedPlan === plan.name
-                    ? "border-blue-600"
+                    ? "border-[#14B8A6]"
                     : "border-gray-200 hover:shadow-lg"
                 }
               `}
             >
               {/* Title */}
-              <h3 className="text-xl font-semibold text-blue-800">{plan.name}</h3>
+              <h3 className="text-xl font-semibold text-[#14B8A6]">{plan.name}</h3>
               <p className="mt-1 text-gray-600">{plan.users}</p>
 
               {/* Price */}
-              <p className="mt-4 text-3xl font-bold text-blue-900">{plan.price}</p>
+              <p className="mt-4 text-3xl font-bold text-gray-800">{plan.price}</p>
 
               {/* Features as simple list with dots */}
               <ul className="mt-6 list-disc list-inside text-gray-600 text-sm space-y-2">
@@ -116,8 +116,8 @@ export default function Pricing() {
               <button
                 className={`mt-8 w-full py-2 px-4 rounded-lg font-semibold transition ${
                   selectedPlan === plan.name
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                    ? "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
+                    : "bg-teal-100 text-[#14B8A6] hover:bg-teal-200"
                 }`}
               >
                 {plan.cta}

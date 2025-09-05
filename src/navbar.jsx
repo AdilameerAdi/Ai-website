@@ -53,11 +53,14 @@ export default function Navbar({ setIsAuthModalOpen }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2 py-2">
             <img
               src={logo}
               alt="Logo"
-              className="h-16 w-auto md:w-40 object-contain"
+              className="h-12 w-auto md:w-36 object-contain"
+              style={{
+                filter: 'brightness(0) saturate(100%) invert(49%) sepia(96%) saturate(1161%) hue-rotate(164deg) brightness(95%) contrast(94%)'
+              }}
             />
           </a>
 
@@ -67,7 +70,7 @@ export default function Navbar({ setIsAuthModalOpen }) {
               <button
                 key={link}
                 onClick={() => smoothScrollTo(link.toLowerCase().replace(/\s+/g, "-"))}
-                className="relative text-gray-800 font-medium transition-colors hover:text-[#46bfe2] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#46bfe2] after:transition-all hover:after:w-full"
+                className="relative text-gray-800 font-medium transition-colors hover:text-[#14B8A6] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#14B8A6] after:transition-all hover:after:w-full"
               >
                 {link}
               </button>
@@ -76,12 +79,12 @@ export default function Navbar({ setIsAuthModalOpen }) {
 
           {/* Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="px-4 py-2 rounded-2xl text-white bg-[#46bfe2] hover:opacity-90 transition">
+            <button className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
               Request Demo
             </button>
             <button 
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition"
+              className="px-4 py-2 rounded-2xl border border-[#14B8A6] text-[#14B8A6] hover:bg-[#14B8A6] hover:text-white transition"
             >
               Login
             </button>
@@ -140,12 +143,12 @@ export default function Navbar({ setIsAuthModalOpen }) {
             </button>
           ))}
           <div className="flex flex-col gap-3 mt-4">
-            <button className="px-4 py-2 rounded-2xl text-white bg-[#46bfe2] hover:opacity-90 transition">
+            <button className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
               Request Demo
             </button>
             <button 
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition"
+              className="px-4 py-2 rounded-2xl border border-[#14B8A6] text-[#14B8A6] hover:bg-[#14B8A6] hover:text-white transition"
             >
               Login
             </button>

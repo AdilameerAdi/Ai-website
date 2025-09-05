@@ -41,7 +41,7 @@ export default function ContactDemo() {
       <div className="max-w-4xl mx-auto px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             Contact & Demo Request
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -62,7 +62,7 @@ export default function ContactDemo() {
               onChange={handleChange}
               placeholder="Name"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
             />
             <input
               type="email"
@@ -71,7 +71,7 @@ export default function ContactDemo() {
               onChange={handleChange}
               placeholder="Email"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
             />
           </div>
 
@@ -81,7 +81,7 @@ export default function ContactDemo() {
             value={formData.company}
             onChange={handleChange}
             placeholder="Company"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
           />
 
           <textarea
@@ -91,12 +91,12 @@ export default function ContactDemo() {
             placeholder="Message"
             rows="5"
             required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
           />
 
           <button
             type="submit"
-            className="w-full py-3 px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+            className="w-full py-3 px-6 bg-[#14B8A6] text-white rounded-lg font-semibold hover:bg-[#0d9488] transition"
           >
             Send Request
           </button>

@@ -3,7 +3,7 @@ import logo from "../img/log.png";
 
 export default function Footer() {
   return (
-    <footer className="relative py-16" style={{ background: "linear-gradient(to top, #0f79af, #1da1ff)", color: "#f0f0f0" }}>
+    <footer className="relative py-16" style={{ background: "linear-gradient(to top, #14B8A6, #1E96B7)", color: "#f0f0f0" }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
 
         {/* Company Info */}
@@ -21,7 +21,7 @@ export default function Footer() {
 
         {/* Quick Links */}
         <div>
-          <h4 className="text-lg font-semibold text-white mb-4 border-b border-blue-300 pb-2">Quick Links</h4>
+          <h4 className="text-lg font-semibold text-white mb-4 border-b border-[#14B8A6] pb-2">Quick Links</h4>
           <ul className="space-y-3">
             <li><a href="#home" className="hover:text-white transition">Home</a></li>
             <li><a href="#features" className="hover:text-white transition">Features</a></li>
@@ -35,7 +35,7 @@ export default function Footer() {
 
         {/* Legal */}
         <div>
-          <h4 className="text-lg font-semibold text-white mb-4 border-b border-blue-300 pb-2">Legal</h4>
+          <h4 className="text-lg font-semibold text-white mb-4 border-b border-[#14B8A6] pb-2">Legal</h4>
           <ul className="space-y-3">
             <li><a href="#privacy" className="hover:text-white transition">Privacy Policy</a></li>
             <li><a href="#terms" className="hover:text-white transition">Terms of Service</a></li>
@@ -44,7 +44,7 @@ export default function Footer() {
 
         {/* Social Media */}
         <div>
-          <h4 className="text-lg font-semibold text-white mb-4 border-b border-blue-300 pb-2">Follow Us</h4>
+          <h4 className="text-lg font-semibold text-white mb-4 border-b border-[#14B8A6] pb-2">Follow Us</h4>
           <div className="flex gap-4 mt-3">
             <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition transform hover:scale-110">
               <FaLinkedin size={24} />
@@ -61,7 +61,7 @@ export default function Footer() {
       </div>
 
       {/* Bottom Copyright */}
-      <div className="mt-16 border-t border-blue-300 pt-6 text-center text-gray-200 text-sm">
+      <div className="mt-16 border-t border-[#14B8A6] pt-6 text-center text-gray-200 text-sm">
         © 2025 Conseccomms Pvt Ltd. All rights reserved.
       </div>
     </footer>

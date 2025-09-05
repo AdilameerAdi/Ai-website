@@ -5,11 +5,11 @@ export default function Features() {
     {
       title: "ConsecDesk",
       description: "Dashboard • Tickets • AI auto-replies & summaries.",
-      icon: <FaTachometerAlt className="h-10 w-10 text-indigo-600" />,
+      icon: <FaTachometerAlt className="h-10 w-10 text-[#14B8A6]" />,
       bullets: [
-        { text: "Client Dashboard", icon: <FaTachometerAlt className="text-indigo-500" /> },
-        { text: "Ticket Management", icon: <FaTicketAlt className="text-indigo-500" /> },
-        { text: "AI Auto-Replies & Summaries", icon: <FaRobot className="text-indigo-500" /> },
+        { text: "Client Dashboard", icon: <FaTachometerAlt className="text-[#14B8A6]" /> },
+        { text: "Ticket Management", icon: <FaTicketAlt className="text-[#14B8A6]" /> },
+        { text: "AI Auto-Replies & Summaries", icon: <FaRobot className="text-[#14B8A6]" /> },
       ],
     },
     {
@@ -25,11 +25,11 @@ export default function Features() {
     {
       title: "ConsecQuote",
       description: "Create/Edit/PDF • Track status • AI suggestions & pricing.",
-      icon: <FaFileAlt className="h-10 w-10 text-blue-600" />,
+      icon: <FaFileAlt className="h-10 w-10 text-[#14B8A6]" />,
       bullets: [
-        { text: "Create, Edit & Export PDF", icon: <FaEdit className="text-blue-500" /> },
-        { text: "Track Proposal Status", icon: <FaCheckCircle className="text-blue-500" /> },
-        { text: "AI Suggestions & Pricing", icon: <FaRobot className="text-blue-500" /> },
+        { text: "Create, Edit & Export PDF", icon: <FaEdit className="text-[#14B8A6]" /> },
+        { text: "Track Proposal Status", icon: <FaCheckCircle className="text-[#14B8A6]" /> },
+        { text: "AI Suggestions & Pricing", icon: <FaRobot className="text-[#14B8A6]" /> },
       ],
     },
   ];
@@ -40,7 +40,7 @@ export default function Features() {
 
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             Powerful Features for SMEs
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -56,10 +56,10 @@ export default function Features() {
               key={index}
               className="p-8 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition text-center"
             >
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mx-auto mb-6">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-teal-50 mx-auto mb-6">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold text-blue-800">
+              <h3 className="text-xl font-semibold text-[#14B8A6]">
                 {feature.title}
               </h3>
               <p className="mt-3 text-gray-600">{feature.description}</p>

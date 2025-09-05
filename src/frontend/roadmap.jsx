@@ -19,12 +19,12 @@ export default function Roadmap() {
   };
 
   return (
-    <section className="bg-gradient-to-b from-sky-50 to-white py-20" id="roadmap">
+    <section className="bg-gradient-to-b from-teal-50 to-white py-20" id="roadmap">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
             🚀 Future Roadmap (Coming Soon)
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -40,18 +40,18 @@ export default function Roadmap() {
               <div
                 key={index}
                 className={`p-8 rounded-2xl border shadow-md transition transform hover:-translate-y-1 hover:shadow-lg bg-white text-center
-                  ${notified === app.name ? "border-blue-600 ring-2 ring-blue-400" : "border-gray-200"}
+                  ${notified === app.name ? "border-[#14B8A6] ring-2 ring-[#14B8A6]" : "border-gray-200"}
                 `}
               >
                 {/* Icon */}
                 <div className="flex justify-center">
-                  <div className="p-4 rounded-2xl bg-blue-100 text-blue-600">
+                  <div className="p-4 rounded-2xl bg-teal-100 text-[#14B8A6]">
                     <Icon size={36} />
                   </div>
                 </div>
 
                 {/* Title */}
-                <h3 className="mt-4 text-xl font-semibold text-blue-800">{app.name}</h3>
+                <h3 className="mt-4 text-xl font-semibold text-[#14B8A6]">{app.name}</h3>
 
                 {/* Description */}
                 <p className="mt-2 text-gray-600 text-sm leading-relaxed">{app.desc}</p>
@@ -63,7 +63,7 @@ export default function Roadmap() {
                     ${
                       notified === app.name
                         ? "bg-green-600 text-white"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
                     }
                   `}
                 >

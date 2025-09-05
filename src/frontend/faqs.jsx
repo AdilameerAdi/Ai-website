@@ -50,7 +50,7 @@ export default function FAQs() {
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-blue-900">FAQs</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">FAQs</h2>
           <p className="mt-4 text-lg text-gray-600">
             Answers to common questions about Conseccomms.
           </p>
@@ -65,7 +65,7 @@ export default function FAQs() {
             >
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full flex justify-between items-center px-6 py-4 text-left text-lg font-medium text-blue-800 hover:bg-blue-50"
+                className="w-full flex justify-between items-center px-6 py-4 text-left text-lg font-medium text-[#14B8A6] hover:bg-teal-50"
               >
                 {faq.q}
                 <ChevronDown

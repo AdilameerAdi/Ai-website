@@ -44,8 +44,8 @@ export default function AuthModal({ isOpen, onClose }) {
           </svg>
         </button>
 
-        <h2 className="text-2xl font-bold text-blue-900 text-center">
-          {isLogin ? "Login to ConsecComms" : "Sign Up for ConsecComms"}
+        <h2 className="text-2xl font-bold text-gray-800 text-center">
+          {isLogin ? "Login to Conseccomms" : "Sign Up for Conseccomms"}
         </h2>
         <p className="text-center text-gray-500 mt-2">
           {isLogin
@@ -64,7 +64,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#46bfe2] focus:outline-none"
+                className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
               />
             </div>
           )}
@@ -95,7 +95,7 @@ export default function AuthModal({ isOpen, onClose }) {
             <div className="text-right">
               <a
                 href="#"
-                className="text-sm text-[#46bfe2] hover:underline"
+                className="text-sm text-[#14B8A6] hover:underline"
               >
                 Forgot Password?
               </a>
@@ -104,7 +104,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
           <button
             type="submit"
-            className="w-full py-2 px-4 rounded-xl font-semibold bg-[#46bfe2] text-white hover:bg-blue-600 transition"
+            className="w-full py-2 px-4 rounded-xl font-semibold bg-[#14B8A6] text-white hover:bg-[#0d9488] transition"
           >
             {isLogin ? "Login" : "Sign Up"}
           </button>
@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose }) {
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-[#46bfe2] font-semibold hover:underline"
+            className="text-[#14B8A6] font-semibold hover:underline"
           >
             {isLogin ? "Sign Up" : "Login"}
           </button>
