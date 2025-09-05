@@ -29,7 +29,7 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="relative bg-white py-20">
+    <section id="how-it-works" className="relative bg-white py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         {/* Heading */}

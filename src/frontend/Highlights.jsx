@@ -20,7 +20,7 @@ export default function Highlights() {
   ];
 
   return (
-    <section className="relative bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 py-20">
+    <section id="ai" className="relative bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         {/* Heading */}

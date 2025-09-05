@@ -1,6 +1,6 @@
 export default function Hero({ setIsAuthModalOpen }) {
   return (
-    <section className="relative bg-gradient-to-r from-white via-sky-50 to-blue-100 pt-32 pb-20">
+    <section id="home" className="relative bg-gradient-to-r from-white via-sky-50 to-blue-100 pt-32 pb-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-12">
         
         {/* Left Content */}

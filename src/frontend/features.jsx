@@ -35,7 +35,7 @@ export default function Features() {
   ];
 
   return (
-    <section className="relative bg-gray-50 py-20">
+    <section id="features" className="relative bg-gray-50 py-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
         {/* Heading */}
