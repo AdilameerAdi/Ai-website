@@ -1,3 +1,4 @@
+import { useState } from "react"
 import Navbar from "./navbar"
 import Hero from "./frontend/hero"
 import Problem from "./frontend/problem"
@@ -11,12 +12,14 @@ import FAQs from "./frontend/faqs"
 import ContactDemo from "./frontend/contact"
 import FeedbackForm from "./frontend/feedback"
 import Footer from "./frontend/Footer"
-import AuthPage from "./login/Auth"
+import AuthModal from "./login/Auth"
+
 export default function App(){
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return<>
-<Navbar></Navbar>
-<Hero></Hero>
+<Navbar setIsAuthModalOpen={setIsAuthModalOpen}></Navbar>
+<Hero setIsAuthModalOpen={setIsAuthModalOpen}></Hero>
 <Problem></Problem>
 <Solution></Solution>
 <Features></Features>
@@ -28,6 +31,9 @@ export default function App(){
 <ContactDemo></ContactDemo>
 <FeedbackForm/>
 <Footer></Footer>
-<AuthPage></AuthPage>
+<AuthModal 
+  isOpen={isAuthModalOpen} 
+  onClose={() => setIsAuthModalOpen(false)} 
+/>
   </>
 }

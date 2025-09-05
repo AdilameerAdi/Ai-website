@@ -1,4 +1,4 @@
-export default function Hero() {
+export default function Hero({ setIsAuthModalOpen }) {
   return (
     <section className="relative bg-gradient-to-r from-white via-sky-50 to-blue-100 pt-32 pb-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-12">
@@ -21,7 +21,10 @@ export default function Hero() {
             <button className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition">
               Request Demo
             </button>
-            <button className="px-6 py-3 rounded-xl border border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition">
+            <button 
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-6 py-3 rounded-xl border border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition"
+            >
               Login
             </button>
           </div>

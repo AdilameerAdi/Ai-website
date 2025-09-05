@@ -1,7 +1,7 @@
 import { useState } from "react";
 import logo from "./img/logo.png";
 
-export default function Navbar() {
+export default function Navbar({ setIsAuthModalOpen }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -46,7 +46,10 @@ export default function Navbar() {
             <button className="px-4 py-2 rounded-2xl text-white bg-[#46bfe2] hover:opacity-90 transition">
               Request Demo
             </button>
-            <button className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition">
+            <button 
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition"
+            >
               Login
             </button>
           </div>
@@ -107,7 +110,10 @@ export default function Navbar() {
             <button className="px-4 py-2 rounded-2xl text-white bg-[#46bfe2] hover:opacity-90 transition">
               Request Demo
             </button>
-            <button className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition">
+            <button 
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-4 py-2 rounded-2xl border border-[#46bfe2] text-[#46bfe2] hover:bg-[#46bfe2] hover:text-white transition"
+            >
               Login
             </button>
           </div>
