@@ -3,7 +3,7 @@ import logo from "../img/log.png";
 
 export default function Footer() {
   return (
-    <footer className="relative py-16" style={{ background: "linear-gradient(to top, #14B8A6, #1E96B7)", color: "#f0f0f0" }}>
+    <footer className="relative py-16" style={{ background: "#31BFAF", color: "#f0f0f0" }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
 
         {/* Company Info */}

@@ -5,6 +5,7 @@ export default function AuthModal({ isOpen, onClose }) {
   const [name, setName] = useState(""); // new name field
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false); // Terms & Conditions checkbox
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -102,9 +103,30 @@ export default function AuthModal({ isOpen, onClose }) {
             </div>
           )}
 
+          {/* Terms & Conditions checkbox for signup */}
+          {!isLogin && (
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-[#14B8A6] border-gray-300 rounded focus:ring-[#14B8A6]"
+              />
+              <label htmlFor="acceptTerms" className="text-sm text-gray-600">
+                I agree to the <span className="text-[#14B8A6] hover:underline cursor-pointer">Terms & Conditions</span> and <span className="text-[#14B8A6] hover:underline cursor-pointer">Privacy Policy</span>
+              </label>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-2 px-4 rounded-xl font-semibold bg-[#14B8A6] text-white hover:bg-[#0d9488] transition"
+            disabled={!isLogin && !acceptTerms}
+            className={`w-full py-2 px-4 rounded-xl font-semibold transition ${
+              !isLogin && !acceptTerms
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
+            }`}
           >
             {isLogin ? "Login" : "Sign Up"}
           </button>
@@ -126,7 +148,10 @@ export default function AuthModal({ isOpen, onClose }) {
         <p className="mt-6 text-center text-gray-600">
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setAcceptTerms(false); // Reset terms checkbox when switching modes
+            }}
             className="text-[#14B8A6] font-semibold hover:underline"
           >
             {isLogin ? "Sign Up" : "Login"}
