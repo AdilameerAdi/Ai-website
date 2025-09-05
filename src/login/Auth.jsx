@@ -1,22 +1,112 @@
 import { useState } from "react";
+import { supabase } from "../lib/supabase";
 
-export default function AuthModal({ isOpen, onClose }) {
+export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true); // toggle between login & signup
   const [name, setName] = useState(""); // new name field
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false); // Terms & Conditions checkbox
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      // handle login logic
-      alert(`Logging in with ${email}`);
-    } else {
-      // handle signup logic
-      alert(`Signing up with Name: ${name}, Email: ${email}`);
+    setLoading(true);
+    setError("");
+
+    try {
+      if (isLogin) {
+        // Handle login logic - fetch user from database
+        const { data: users, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (fetchError || !users) {
+          throw new Error('Invalid email or password');
+        }
+
+        // Simple password verification (in production, use proper hashing!)
+        // For now, we'll use Supabase Auth for secure password handling
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (signInError) {
+          // If auth fails, check our custom table
+          const { data: userCheck, error: checkError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .eq('password', password) // Note: In production, NEVER store plain passwords!
+            .single();
+
+          if (checkError || !userCheck) {
+            throw new Error('Invalid email or password');
+          }
+
+          // Pass user data to parent component
+          onLoginSuccess(userCheck);
+        } else {
+          // Pass user data to parent component
+          onLoginSuccess(users);
+        }
+      } else {
+        // Handle signup logic - save to database
+        
+        // First, check if email already exists
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('email')
+          .eq('email', email)
+          .single();
+
+        if (existingUser) {
+          throw new Error('Email already registered. Please login instead.');
+        }
+
+        // Insert new user into our custom users table
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([
+            {
+              full_name: name,
+              email: email,
+              password: password // Note: In production, hash this password!
+            }
+          ])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Also create auth account for secure authentication
+        try {
+          await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: {
+                full_name: name,
+              }
+            }
+          });
+        } catch (authError) {
+          console.log('Auth signup error (non-critical):', authError);
+        }
+
+        alert(`Account created successfully! Welcome, ${name}!`);
+        onClose(); // Close modal after successful signup
+      }
+    } catch (error) {
+      setError(error.message);
+      console.error('Auth error:', error);
+    } finally {
+      setLoading(false);
     }
-    onClose(); // Close modal after submission
   };
 
   if (!isOpen) return null;
@@ -53,6 +143,13 @@ export default function AuthModal({ isOpen, onClose }) {
             ? "Enter your credentials to access your dashboard"
             : "Create your account to start using ConsecDesk, Drive & Quote"}
         </p>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -121,14 +218,21 @@ export default function AuthModal({ isOpen, onClose }) {
 
           <button
             type="submit"
-            disabled={!isLogin && !acceptTerms}
+            disabled={(!isLogin && !acceptTerms) || loading}
             className={`w-full py-2 px-4 rounded-xl font-semibold transition ${
-              !isLogin && !acceptTerms
+              (!isLogin && !acceptTerms) || loading
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
             }`}
           >
-            {isLogin ? "Login" : "Sign Up"}
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {isLogin ? "Logging in..." : "Creating Account..."}
+              </div>
+            ) : (
+              isLogin ? "Login" : "Sign Up"
+            )}
           </button>
 
           {/* Google OAuth placeholder */}
@@ -151,6 +255,7 @@ export default function AuthModal({ isOpen, onClose }) {
             onClick={() => {
               setIsLogin(!isLogin);
               setAcceptTerms(false); // Reset terms checkbox when switching modes
+              setError(""); // Clear any error messages
             }}
             className="text-[#14B8A6] font-semibold hover:underline"
           >
