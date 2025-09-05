@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 export default function Pricing() {
-  // Default selected plan = "Start Free"
   const [selectedPlan, setSelectedPlan] = useState("Start Free");
 
   const plans = [
@@ -106,12 +105,10 @@ export default function Pricing() {
               {/* Price */}
               <p className="mt-4 text-3xl font-bold text-blue-900">{plan.price}</p>
 
-              {/* Features */}
-              <ul className="mt-6 space-y-3 text-gray-600 text-sm">
+              {/* Features as simple list with dots */}
+              <ul className="mt-6 list-disc list-inside text-gray-600 text-sm space-y-2">
                 {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start">
-                    <span className="text-blue-500 mr-2">✔</span> {feature}
-                  </li>
+                  <li key={i}>{feature}</li>
                 ))}
               </ul>
 

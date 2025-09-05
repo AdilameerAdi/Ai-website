@@ -11,6 +11,7 @@ import FAQs from "./frontend/faqs"
 import ContactDemo from "./frontend/contact"
 import FeedbackForm from "./frontend/feedback"
 import Footer from "./frontend/Footer"
+import AuthPage from "./login/Auth"
 export default function App(){
 
   return<>
@@ -27,5 +28,6 @@ export default function App(){
 <ContactDemo></ContactDemo>
 <FeedbackForm/>
 <Footer></Footer>
+<AuthPage></AuthPage>
   </>
 }

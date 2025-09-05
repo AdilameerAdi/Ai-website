@@ -1,5 +1,5 @@
 import { FaLinkedin, FaTwitter, FaInstagram } from "react-icons/fa";
-import logo from "../img/logo.png";
+import logo from "../img/log.png";
 
 export default function Footer() {
   return (
@@ -7,17 +7,17 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
 
         {/* Company Info */}
-        <div className="flex flex-col items-start">
-          <img src={logo} alt="Conseccomms Logo" className="w-36 mb-4" />
-          <p className="text-gray-200 text-sm mb-6">
-            Inspiring Brilliance, Streaming to Digital Horizons.
-          </p>
-          <div className="space-y-2 text-gray-200 text-sm">
-            <p>📍 Mumbai, Maharashtra, India</p>
-            <p>📧 <a href="mailto:info@conseccomms.com" className="underline hover:text-white transition">info@conseccomms.com</a></p>
-            <p>☎ +91-XXXXXXXXXX</p>
-          </div>
-        </div>
+       <div className="flex flex-col items-start">
+  <img src={logo} alt="Conseccomms Logo" className="w-48 h-30 mb-4 object-contain" />
+  <p className="text-gray-200 text-sm mb-6">
+    Inspiring Brilliance, Streaming to Digital Horizons.
+  </p>
+  <div className="space-y-2 text-gray-200 text-sm">
+    <p>📍 Mumbai, Maharashtra, India</p>
+    <p>📧 <a href="mailto:info@conseccomms.com" className="underline hover:text-white transition">info@conseccomms.com</a></p>
+    <p>☎ +91-XXXXXXXXXX</p>
+  </div>
+</div>
 
         {/* Quick Links */}
         <div>
