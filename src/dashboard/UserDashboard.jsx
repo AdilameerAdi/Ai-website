@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import ResponsiveLayout, { ResponsiveGrid, ResponsiveCard, ResponsiveButton } from '../components/ResponsiveLayout';
 import { QuickSearch } from '../components/SearchComponents';
 import dashboardService from '../services/dashboardService';
+import searchService from '../services/searchService';
 
 export default function UserDashboard({ user, onLogout, navigate }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -49,6 +50,13 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     }
   }, [user]);
 
+  // Auto-refresh stats when switching to overview tab
+  useEffect(() => {
+    if (user && activeTab === "overview") {
+      loadDashboardStats();
+    }
+  }, [user, activeTab]);
+
   const loadDashboardStats = async () => {
     try {
       setStatsLoading(true);
@@ -60,6 +68,21 @@ export default function UserDashboard({ user, onLogout, navigate }) {
       console.error('Error loading dashboard stats:', error);
     } finally {
       setStatsLoading(false);
+    }
+  };
+
+  const createSampleData = async () => {
+    try {
+      const result = await dashboardService.createSampleData();
+      if (result.success) {
+        alert('Sample data created! Refresh the page to see updated counts.');
+        loadDashboardStats(); // Refresh stats
+      } else {
+        alert('Failed to create sample data: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error creating sample data:', error);
+      alert('Error creating sample data');
     }
   };
 
@@ -170,12 +193,12 @@ export default function UserDashboard({ user, onLogout, navigate }) {
               <span className="sm:hidden text-gray-700 text-sm">Hi, {user?.full_name?.split(' ')[0] || user?.email.split('@')[0]}</span>
               <ResponsiveButton
                 onClick={handleLogout}
-                variant="danger"
+                variant="outline"
                 size="small"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 hover:bg-gray-50"
               >
-                <FaSignOutAlt />
-                <span className="hidden sm:inline">Logout</span>
+                <FaSignOutAlt className="text-red-500" />
+                <span className="hidden sm:inline text-gray-700">Logout</span>
               </ResponsiveButton>
             </div>
           </div>
@@ -224,7 +247,9 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           {/* Overview Tab */}
           {activeTab === "overview" && (
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Dashboard Overview</h2>
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Dashboard Overview</h2>
+              </div>
               
               {/* Stats Cards */}
               <ResponsiveGrid cols={{ mobile: 1, tablet: 2, desktop: 3 }} className="mb-6 sm:mb-8">
@@ -265,11 +290,38 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                 </ResponsiveCard>
               </ResponsiveGrid>
 
+              {/* Database Test (Temporary - Remove after testing) */}
+              {(userStats.desks === 0 && userStats.drives === 0 && userStats.quotes === 0) && (
+                <ResponsiveCard className="mb-6 sm:mb-8 bg-yellow-50 border-yellow-200">
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-3">Database Setup Test</h3>
+                  <p className="text-yellow-700 text-sm mb-4">
+                    All counts are showing 0. This means either:
+                    <br />• The database tables don't exist yet (run FINAL_DATABASE_SETUP.sql)
+                    <br />• The tables are empty (click button below to create test data)
+                  </p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={createSampleData}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition text-sm"
+                    >
+                      Create Test Data (Tickets + Files)
+                    </button>
+                    <button
+                      onClick={() => window.open('https://supabase.com', '_blank')}
+                      className="ml-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
+                    >
+                      Open Supabase Dashboard
+                    </button>
+                  </div>
+                </ResponsiveCard>
+              )}
+
               {/* Quick Search */}
               <ResponsiveCard className="mb-6 sm:mb-8">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Quick Search</h3>
                 <QuickSearch
-                  placeholder="Search across all your data..."
+                  placeholder="Search tickets, files, proposals..."
+                  searchService={searchService}
                   onResultSelect={(result) => {
                     // Handle navigation based on result type
                     switch(result.type) {

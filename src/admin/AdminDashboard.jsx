@@ -1,48 +1,78 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FaUsers, FaFileAlt, FaChartBar, FaServer, FaDollarSign, FaUserTie, 
   FaDownload, FaEye, FaCog, FaDatabase, FaCloudUploadAlt, FaBell,
-  FaExclamationTriangle, FaCheckCircle, FaClock, FaArrowUp
+  FaExclamationTriangle, FaCheckCircle, FaClock, FaArrowUp, FaSpinner
 } from 'react-icons/fa';
 import { exportService } from '../services/exportService';
+import adminService from '../services/adminService';
 
 export default function AdminDashboard({ navigate, onLogout }) {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  
-  // Mock data for dashboard
-  const stats = {
-    totalUsers: 1234,
-    activeUsers: 987,
-    storageUsed: '2.5 TB',
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    storageUsed: '0 B',
     storageLimit: '10 TB',
-    activeProposals: 89,
-    monthlyRevenue: 45000,
+    storagePercent: 0,
+    activeProposals: 0,
+    monthlyRevenue: 0,
     systemHealth: 98.5,
-    pendingLeads: 23
-  };
+    pendingLeads: 0
+  });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const recentActivity = [
-    { id: 1, action: 'New user registered', user: 'John Doe', time: '5 min ago', type: 'user' },
-    { id: 2, action: 'Proposal submitted', user: 'Jane Smith', time: '12 min ago', type: 'proposal' },
-    { id: 3, action: 'File uploaded', user: 'Mike Johnson', time: '18 min ago', type: 'file' },
-    { id: 4, action: 'Lead converted', user: 'Sarah Wilson', time: '25 min ago', type: 'lead' }
-  ];
+  // Load dashboard data
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load stats
+      const statsResult = await adminService.getDashboardStats();
+      if (statsResult.success) {
+        setStats(prev => ({ ...prev, ...statsResult.data }));
+      } else {
+        setError(statsResult.error);
+      }
+
+      // Load recent activity
+      const activityResult = await adminService.getRecentActivity(8);
+      if (activityResult.success) {
+        setRecentActivity(activityResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateUserActivityReport = async () => {
     setIsGeneratingReport(true);
     try {
-      // Mock user activity data
-      const activityData = [
-        { date: '2024-01-01', activeUsers: 234, newSignups: 12, totalLogins: 456 },
-        { date: '2024-01-02', activeUsers: 267, newSignups: 15, totalLogins: 523 },
-        { date: '2024-01-03', activeUsers: 298, newSignups: 8, totalLogins: 612 }
-      ];
+      // Get real user activity data for the last 30 days
+      const endDate = new Date().toISOString();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
       
-      const result = await exportService.exportReportToCSV(activityData, 'user-activity', 'user-activity-report.csv');
+      const result = await adminService.getUserActivityData(startDate.toISOString(), endDate);
       if (result.success) {
-        alert('User activity report generated and downloaded successfully!');
+        const csvResult = await exportService.exportReportToCSV(result.data, 'user-activity', 'user-activity-report.csv');
+        if (csvResult.success) {
+          alert('User activity report generated and downloaded successfully!');
+        } else {
+          alert('Failed to generate report: ' + csvResult.error);
+        }
       } else {
-        alert('Failed to generate report: ' + result.error);
+        alert('Failed to get user activity data: ' + result.error);
       }
     } catch (error) {
       console.error('Report generation error:', error);
@@ -108,6 +138,38 @@ export default function AdminDashboard({ navigate, onLogout }) {
     alert('System Settings:\n\n• Storage Limit: 10TB\n• Max File Size: 100MB\n• Session Timeout: 30 minutes\n• Backup Frequency: Daily\n• Maintenance Window: 2-4 AM UTC');
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <FaSpinner className="h-12 w-12 text-[#14B8A6] animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700">Loading Dashboard...</h2>
+          <p className="text-gray-500 mt-2">Please wait while we load your admin data</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <FaExclamationTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700">Access Denied</h2>
+          <p className="text-gray-500 mt-2 mb-6">{error}</p>
+          <button 
+            onClick={onLogout}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -116,12 +178,20 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back, Administrator</p>
           </div>
-          <button 
-            onClick={onLogout}
-            className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={loadDashboardData}
+              className="px-4 py-2 text-[#14B8A6] hover:bg-[#14B8A6] hover:text-white border border-[#14B8A6] rounded-lg transition"
+            >
+              Refresh Data
+            </button>
+            <button 
+              onClick={onLogout}
+              className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+            >
+              Logout
+            </button>
+          </div>
         </div>
         
         {/* Key Statistics */}
@@ -142,7 +212,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
                 <p className="text-3xl font-bold text-gray-800">{stats.storageUsed}</p>
-                <p className="text-sm text-gray-500 mt-1">of {stats.storageLimit}</p>
+                <p className="text-sm text-gray-500 mt-1">of {stats.storageLimit} ({stats.storagePercent}%)</p>
               </div>
               <FaDatabase className="text-3xl text-blue-500 opacity-20" />
             </div>
@@ -163,8 +233,14 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Monthly Revenue</h3>
-                <p className="text-3xl font-bold text-gray-800">${(stats.monthlyRevenue / 1000).toFixed(0)}K</p>
-                <p className="text-sm text-green-600 mt-1">↑ 12% vs last month</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  ${stats.monthlyRevenue >= 1000 
+                    ? `${(stats.monthlyRevenue / 1000).toFixed(1)}K` 
+                    : stats.monthlyRevenue.toFixed(0)}
+                </p>
+                <p className={`text-sm mt-1 ${stats.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {stats.revenueGrowth >= 0 ? '↑' : '↓'} {Math.abs(stats.revenueGrowth || 0)}% vs last month
+                </p>
               </div>
               <FaDollarSign className="text-3xl text-green-500 opacity-20" />
             </div>
@@ -223,19 +299,26 @@ export default function AdminDashboard({ navigate, onLogout }) {
               Recent Activity
             </h3>
             <div className="space-y-3">
-              {recentActivity.slice(0, 4).map(activity => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'user' ? 'bg-blue-500' :
-                    activity.type === 'proposal' ? 'bg-purple-500' :
-                    activity.type === 'file' ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{activity.action}</p>
-                    <p className="text-xs text-gray-600">{activity.user} • {activity.time}</p>
+              {recentActivity.length > 0 ? (
+                recentActivity.slice(0, 4).map(activity => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      activity.type === 'user' ? 'bg-blue-500' :
+                      activity.type === 'proposal' ? 'bg-purple-500' :
+                      activity.type === 'file' ? 'bg-green-500' :
+                      activity.type === 'ticket' ? 'bg-yellow-500' : 'bg-gray-500'
+                    }`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800">{activity.action}</p>
+                      <p className="text-xs text-gray-600">{activity.user} • {activity.time}</p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">No recent activity</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

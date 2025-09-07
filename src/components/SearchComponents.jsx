@@ -404,11 +404,15 @@ export const QuickSearch = ({
   onResultSelect,
   placeholder = 'Quick search...',
   dataSources = {},
-  className = ''
+  className = '',
+  searchService
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const searchRef = useRef(null);
+  const searchTimeout = useRef(null);
 
   // Close on click outside
   useEffect(() => {
@@ -424,14 +428,47 @@ export const QuickSearch = ({
     }
   }, [isOpen]);
 
-  // Mock search results (replace with actual search hook)
-  const searchResults = query.length > 2 ? [
-    { id: 1, title: 'Sample Result', type: 'ticket', description: 'This is a sample search result' }
-  ] : [];
+  // Search with debounce
+  useEffect(() => {
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    if (query.length >= 2) {
+      setLoading(true);
+      searchTimeout.current = setTimeout(async () => {
+        try {
+          if (searchService) {
+            const result = await searchService.searchAll(query, 8);
+            if (result.success) {
+              setSearchResults(result.data);
+            } else {
+              setSearchResults([]);
+            }
+          }
+        } catch (error) {
+          console.error('Search error:', error);
+          setSearchResults([]);
+        } finally {
+          setLoading(false);
+        }
+      }, 300);
+    } else {
+      setSearchResults([]);
+      setLoading(false);
+    }
+
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
+  }, [query, searchService]);
 
   const handleResultClick = (result) => {
     setIsOpen(false);
     setQuery('');
+    setSearchResults([]);
     if (onResultSelect) {
       onResultSelect(result);
     }
@@ -448,28 +485,47 @@ export const QuickSearch = ({
       />
       
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-          {query.length < 3 ? (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+          {query.length < 2 ? (
             <div className="p-4 text-center text-gray-500 text-sm">
-              Type at least 3 characters to search
+              Type at least 2 characters to search
+            </div>
+          ) : loading ? (
+            <div className="p-4 text-center text-gray-500 text-sm">
+              <FaSpinner className="animate-spin inline mr-2" />
+              Searching...
             </div>
           ) : searchResults.length > 0 ? (
             searchResults.map(result => (
               <button
                 key={result.id}
                 onClick={() => handleResultClick(result)}
-                className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 focus:bg-gray-50 focus:outline-none"
+                className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 focus:bg-gray-50 focus:outline-none transition-colors"
               >
-                <div className="font-medium text-sm text-gray-900">{result.title}</div>
-                <div className="text-xs text-gray-500 capitalize">{result.type}</div>
-                {result.description && (
-                  <div className="text-xs text-gray-600 mt-1 truncate">{result.description}</div>
-                )}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">{result.title}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-[#14B8A6] font-medium">{result.app}</span>
+                      <span className="text-xs text-gray-400">•</span>
+                      <span className="text-xs text-gray-500 capitalize">{result.type}</span>
+                      {result.status && (
+                        <>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500 capitalize">{result.status}</span>
+                        </>
+                      )}
+                    </div>
+                    {result.description && (
+                      <div className="text-xs text-gray-600 mt-1 truncate">{result.description}</div>
+                    )}
+                  </div>
+                </div>
               </button>
             ))
           ) : (
             <div className="p-4 text-center text-gray-500 text-sm">
-              No results found
+              No results found for "{query}"
             </div>
           )}
         </div>
