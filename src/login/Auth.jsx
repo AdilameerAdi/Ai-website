@@ -1,18 +1,74 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import ForgotPasswordModal from "../components/ForgotPasswordModal.jsx";
+import { useForm } from "../hooks/useForm";
+import { Input, Checkbox } from "../components/FormComponents";
+import { ResponsiveButton, ResponsiveModal } from "../components/ResponsiveLayout";
+import { ErrorCodes, validateForm } from "../utils/errorHandler";
+import { useToast } from "../components/Toast";
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
-  const [isLogin, setIsLogin] = useState(true); // toggle between login & signup
-  const [name, setName] = useState(""); // new name field
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false); // Terms & Conditions checkbox
-  const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  // Login form validation rules
+  const loginRules = {
+    email: {
+      required: true,
+      email: true
+    },
+    password: {
+      required: true,
+      minLength: 6
+    }
+  };
+
+  // Signup form validation rules
+  const signupRules = {
+    name: {
+      required: true,
+      minLength: 2,
+      maxLength: 50
+    },
+    email: {
+      required: true,
+      email: true
+    },
+    password: {
+      required: true,
+      minLength: 8,
+      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number'
+    },
+    acceptTerms: {
+      required: true,
+      validate: (value) => value === true || 'You must accept the terms and conditions'
+    }
+  };
+
+  const validationRules = isLogin ? loginRules : signupRules;
+  const initialValues = isLogin 
+    ? { email: '', password: '' }
+    : { name: '', email: '', password: '', acceptTerms: false };
+
+  const {
+    values,
+    errors: formErrors,
+    isSubmitting,
+    handleChange,
+    handleSubmit: handleFormSubmit,
+    setFormValues,
+    reset
+  } = useForm(initialValues, validationRules);
+
+  const { email = '', password = '', name = '', acceptTerms = false } = values || {};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError("");
 
     try {
@@ -105,7 +161,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       setError(error.message);
       console.error('Auth error:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -159,9 +215,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <label className="block text-gray-700 mb-1">Full Name</label>
               <input
                 type="text"
+                name="name"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => handleChange('name', e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
               />
             </div>
@@ -171,9 +228,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <label className="block text-gray-700 mb-1">Email</label>
             <input
               type="email"
+              name="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleChange('email', e.target.value)}
               className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#46bfe2] focus:outline-none"
             />
           </div>
@@ -182,21 +240,23 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <label className="block text-gray-700 mb-1">Password</label>
             <input
               type="password"
+              name="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handleChange('password', e.target.value)}
               className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#46bfe2] focus:outline-none"
             />
           </div>
 
           {isLogin && (
             <div className="text-right">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
                 className="text-sm text-[#14B8A6] hover:underline"
               >
                 Forgot Password?
-              </a>
+              </button>
             </div>
           )}
 
@@ -206,26 +266,46 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <input
                 type="checkbox"
                 id="acceptTerms"
+                name="acceptTerms"
                 checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
+                onChange={(e) => handleChange('acceptTerms', e.target.checked)}
                 className="mt-1 w-4 h-4 text-[#14B8A6] border-gray-300 rounded focus:ring-[#14B8A6]"
               />
               <label htmlFor="acceptTerms" className="text-sm text-gray-600">
-                I agree to the <span className="text-[#14B8A6] hover:underline cursor-pointer">Terms & Conditions</span> and <span className="text-[#14B8A6] hover:underline cursor-pointer">Privacy Policy</span>
+                I agree to the{" "}
+                <a
+                  href="#/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#14B8A6] hover:underline cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms & Conditions
+                </a>{" "}
+                and{" "}
+                <a
+                  href="#/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#14B8A6] hover:underline cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </a>
               </label>
             </div>
           )}
 
           <button
             type="submit"
-            disabled={(!isLogin && !acceptTerms) || loading}
+            disabled={(!isLogin && !acceptTerms) || isLoading}
             className={`w-full py-2 px-4 rounded-xl font-semibold transition ${
-              (!isLogin && !acceptTerms) || loading
+              (!isLogin && !acceptTerms) || isLoading
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
             }`}
           >
-            {loading ? (
+            {isLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 {isLogin ? "Logging in..." : "Creating Account..."}
@@ -238,6 +318,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           {/* Google OAuth placeholder */}
           <button
             type="button"
+            onClick={() => alert('Google OAuth integration coming soon!')}
             className="w-full py-2 px-4 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2 mt-2"
           >
             <img
@@ -253,8 +334,13 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
             onClick={() => {
-              setIsLogin(!isLogin);
-              setAcceptTerms(false); // Reset terms checkbox when switching modes
+              const newMode = !isLogin;
+              setIsLogin(newMode);
+              // Reset form with appropriate initial values
+              const newInitialValues = newMode 
+                ? { email: '', password: '' }
+                : { name: '', email: '', password: '', acceptTerms: false };
+              reset(newInitialValues);
               setError(""); // Clear any error messages
             }}
             className="text-[#14B8A6] font-semibold hover:underline"
@@ -269,6 +355,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           </div>
         )}
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onBackToLogin={() => {
+          setShowForgotPassword(false);
+          // Auth modal is already open, so just switch back to login view
+        }}
+      />
     </div>
   );
 }

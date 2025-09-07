@@ -1,0 +1,324 @@
+/* Responsive Design Utilities for Conseccomms */
+
+/* Mobile-first approach with breakpoints */
+:root {
+  --breakpoint-sm: 640px;   /* Small devices */
+  --breakpoint-md: 768px;   /* Medium devices */
+  --breakpoint-lg: 1024px;  /* Large devices */
+  --breakpoint-xl: 1280px;  /* Extra large devices */
+  --breakpoint-2xl: 1536px; /* 2X large devices */
+}
+
+/* Base responsive typography */
+@media (max-width: 768px) {
+  .responsive-text-xl { font-size: 1.5rem; }
+  .responsive-text-2xl { font-size: 1.875rem; }
+  .responsive-text-3xl { font-size: 2.25rem; }
+  .responsive-text-4xl { font-size: 2.5rem; }
+  .responsive-text-5xl { font-size: 3rem; }
+}
+
+@media (max-width: 640px) {
+  .responsive-text-xl { font-size: 1.25rem; }
+  .responsive-text-2xl { font-size: 1.5rem; }
+  .responsive-text-3xl { font-size: 1.875rem; }
+  .responsive-text-4xl { font-size: 2rem; }
+  .responsive-text-5xl { font-size: 2.25rem; }
+}
+
+/* Responsive containers */
+.responsive-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-container { padding: 0 1.5rem; }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container { padding: 0 2rem; }
+}
+
+/* Responsive grids */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid-sm-2 { grid-template-columns: repeat(2, 1fr); }
+  .responsive-grid-sm-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 768px) {
+  .responsive-grid-md-2 { grid-template-columns: repeat(2, 1fr); }
+  .responsive-grid-md-3 { grid-template-columns: repeat(3, 1fr); }
+  .responsive-grid-md-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid-lg-3 { grid-template-columns: repeat(3, 1fr); }
+  .responsive-grid-lg-4 { grid-template-columns: repeat(4, 1fr); }
+  .responsive-grid-lg-5 { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* Mobile navigation */
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100vh;
+  background: white;
+  z-index: 50;
+  transition: left 0.3s ease-in-out;
+}
+
+.mobile-menu.open {
+  left: 0;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Responsive padding and margins */
+.responsive-p-4 { padding: 1rem; }
+.responsive-p-6 { padding: 1.5rem; }
+.responsive-p-8 { padding: 2rem; }
+
+@media (max-width: 768px) {
+  .responsive-p-4 { padding: 0.75rem; }
+  .responsive-p-6 { padding: 1rem; }
+  .responsive-p-8 { padding: 1.5rem; }
+}
+
+@media (max-width: 640px) {
+  .responsive-p-4 { padding: 0.5rem; }
+  .responsive-p-6 { padding: 0.75rem; }
+  .responsive-p-8 { padding: 1rem; }
+}
+
+/* Responsive buttons */
+.responsive-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .responsive-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Responsive form controls */
+.responsive-input {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-input {
+    padding: 0.625rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Responsive tables */
+.responsive-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 1024px) {
+  .responsive-table table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-table table {
+    min-width: 500px;
+    font-size: 0.875rem;
+  }
+  
+  .responsive-table th,
+  .responsive-table td {
+    padding: 0.5rem !important;
+  }
+}
+
+/* Responsive cards */
+.responsive-card {
+  padding: 1.5rem;
+  margin: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-card {
+    padding: 1rem;
+    margin: 0.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .responsive-card {
+    padding: 0.75rem;
+    margin: 0.125rem;
+  }
+}
+
+/* Hide elements responsively */
+.hide-mobile {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+.hide-desktop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hide-desktop {
+    display: block;
+  }
+}
+
+/* Responsive flex utilities */
+.responsive-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .md\:flex-row {
+    flex-direction: row;
+  }
+}
+
+/* Touch-friendly sizing for mobile */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  button, 
+  .btn,
+  .clickable {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Responsive sidebar */
+.responsive-sidebar {
+  width: 250px;
+  transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 1024px) {
+  .responsive-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 40;
+    transform: translateX(-100%);
+  }
+  
+  .responsive-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Responsive content area */
+.responsive-content {
+  margin-left: 250px;
+  transition: margin-left 0.3s ease-in-out;
+}
+
+@media (max-width: 1024px) {
+  .responsive-content {
+    margin-left: 0;
+  }
+}
+
+/* Modal responsiveness */
+.responsive-modal {
+  max-width: 500px;
+  margin: 2rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-modal {
+    max-width: none;
+    margin: 1rem;
+    width: calc(100% - 2rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .responsive-modal {
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
+    max-height: calc(100vh - 1rem);
+    overflow-y: auto;
+  }
+}
+
+/* Responsive spacing utilities */
+.responsive-space-y-2 > * + * { margin-top: 0.5rem; }
+.responsive-space-y-4 > * + * { margin-top: 1rem; }
+.responsive-space-y-6 > * + * { margin-top: 1.5rem; }
+
+@media (max-width: 768px) {
+  .responsive-space-y-2 > * + * { margin-top: 0.375rem; }
+  .responsive-space-y-4 > * + * { margin-top: 0.75rem; }
+  .responsive-space-y-6 > * + * { margin-top: 1rem; }
+}
+
+/* Responsive text alignment */
+@media (max-width: 768px) {
+  .mobile-text-center { text-align: center; }
+  .mobile-text-left { text-align: left; }
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  .print-break { page-break-before: always; }
+}

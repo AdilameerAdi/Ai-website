@@ -1,21 +1,66 @@
 import { useState } from "react";
-import { Video, Mail, Users, CreditCard, MessageSquare, Link2 } from "lucide-react";
+import { Video, Mail, Users, CreditCard, MessageSquare, Link2, Calendar, Sparkles } from "lucide-react";
+import RoadmapNotifyModal from "../components/RoadmapNotifyModal.jsx";
 
 export default function Roadmap() {
   const upcomingApps = [
-    { name: "ConsecMeet", desc: "AI-powered video meetings with transcripts.", icon: Video },
-    { name: "ConsecMail", desc: "Smart inbox with AI-prioritized email.", icon: Mail },
-    { name: "ConsecTalent", desc: "AI-driven hiring & candidate matching.", icon: Users },
-    { name: "ConsecPay", desc: "UPI/payments with AI fraud detection.", icon: CreditCard },
-    { name: "ConsecLoop", desc: "WhatsApp automation & chatbots.", icon: MessageSquare },
-    { name: "ConsecLink", desc: "AI-powered freelancer marketplace.", icon: Link2 },
+    { 
+      name: "ConsecMeet", 
+      desc: "AI-powered video meetings with transcripts, action items, and smart scheduling.", 
+      icon: Video,
+      timeline: "Q2 2024",
+      features: ["AI Transcription", "Smart Scheduling", "Action Item Tracking"]
+    },
+    { 
+      name: "ConsecMail", 
+      desc: "Smart inbox with AI-prioritized email, automated responses, and sentiment analysis.", 
+      icon: Mail,
+      timeline: "Q3 2024",
+      features: ["Smart Prioritization", "Auto-Response", "Email Analytics"]
+    },
+    { 
+      name: "ConsecTalent", 
+      desc: "AI-driven hiring & candidate matching with skill assessment and interview scheduling.", 
+      icon: Users,
+      timeline: "Q4 2024",
+      features: ["AI Matching", "Skill Assessment", "Interview Automation"]
+    },
+    { 
+      name: "ConsecPay", 
+      desc: "UPI/payments with AI fraud detection, expense tracking, and financial insights.", 
+      icon: CreditCard,
+      timeline: "Q1 2025",
+      features: ["Fraud Detection", "Expense Tracking", "Financial Insights"]
+    },
+    { 
+      name: "ConsecLoop", 
+      desc: "WhatsApp automation & chatbots with AI-powered customer support integration.", 
+      icon: MessageSquare,
+      timeline: "Q2 2025",
+      features: ["WhatsApp Automation", "AI Chatbots", "Multi-channel Support"]
+    },
+    { 
+      name: "ConsecLink", 
+      desc: "AI-powered freelancer marketplace with skill matching and project management.", 
+      icon: Link2,
+      timeline: "Q3 2025",
+      features: ["Skill Matching", "Project Management", "Quality Assurance"]
+    },
   ];
 
-  const [notified, setNotified] = useState(null);
+  const [notified, setNotified] = useState(new Set());
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
 
-  const handleNotify = (appName) => {
-    setNotified(appName);
-    setTimeout(() => setNotified(null), 2000); // reset after 2 sec
+  const handleNotify = (app) => {
+    setSelectedApp(app);
+    setIsNotifyModalOpen(true);
+  };
+
+  const handleNotifySuccess = () => {
+    if (selectedApp) {
+      setNotified(prev => new Set([...prev, selectedApp.name]));
+    }
   };
 
   return (
@@ -40,7 +85,7 @@ export default function Roadmap() {
               <div
                 key={index}
                 className={`p-8 rounded-2xl border shadow-md transition transform hover:-translate-y-1 hover:shadow-lg bg-white text-center
-                  ${notified === app.name ? "border-[#14B8A6] ring-2 ring-[#14B8A6]" : "border-gray-200"}
+                  ${notified.has(app.name) ? "border-[#14B8A6] ring-2 ring-[#14B8A6]" : "border-gray-200"}
                 `}
               >
                 {/* Icon */}
@@ -50,30 +95,59 @@ export default function Roadmap() {
                   </div>
                 </div>
 
-                {/* Title */}
-                <h3 className="mt-4 text-xl font-semibold text-[#14B8A6]">{app.name}</h3>
+                {/* Title & Timeline */}
+                <div className="mt-4">
+                  <h3 className="text-xl font-semibold text-[#14B8A6]">{app.name}</h3>
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    <Calendar size={14} className="text-gray-400" />
+                    <span className="text-xs text-gray-500 font-medium">{app.timeline}</span>
+                  </div>
+                </div>
 
                 {/* Description */}
-                <p className="mt-2 text-gray-600 text-sm leading-relaxed">{app.desc}</p>
+                <p className="mt-3 text-gray-600 text-sm leading-relaxed">{app.desc}</p>
+
+                {/* Features */}
+                <div className="mt-4 space-y-1">
+                  {app.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center justify-center gap-1">
+                      <Sparkles size={12} className="text-[#14B8A6]" />
+                      <span className="text-xs text-gray-600">{feature}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Button */}
                 <button
-                  onClick={() => handleNotify(app.name)}
-                  className={`mt-6 w-full py-2 px-4 rounded-xl font-semibold transition shadow
+                  onClick={() => handleNotify(app)}
+                  disabled={notified.has(app.name)}
+                  className={`mt-6 w-full py-3 px-4 rounded-xl font-semibold transition shadow
                     ${
-                      notified === app.name
-                        ? "bg-green-600 text-white"
+                      notified.has(app.name)
+                        ? "bg-green-600 text-white cursor-not-allowed"
                         : "bg-[#14B8A6] text-white hover:bg-[#0d9488]"
                     }
                   `}
                 >
-                  {notified === app.name ? "✔ Added" : "Notify Me"}
+                  {notified.has(app.name) ? "✔ You're Subscribed!" : "🔔 Notify Me"}
                 </button>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Roadmap Notification Modal */}
+      <RoadmapNotifyModal 
+        isOpen={isNotifyModalOpen} 
+        onClose={() => {
+          setIsNotifyModalOpen(false);
+          setSelectedApp(null);
+        }} 
+        onSuccess={handleNotifySuccess}
+        appName={selectedApp?.name}
+        appTimeline={selectedApp?.timeline}
+      />
     </section>
   );
 }

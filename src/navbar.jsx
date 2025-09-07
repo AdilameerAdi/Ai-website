@@ -79,7 +79,9 @@ export default function Navbar({ setIsAuthModalOpen }) {
 
           {/* Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
+            <button 
+              onClick={() => smoothScrollTo("contact")}
+              className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
               Request Demo
             </button>
             <button 
@@ -143,7 +145,9 @@ export default function Navbar({ setIsAuthModalOpen }) {
             </button>
           ))}
           <div className="flex flex-col gap-3 mt-4">
-            <button className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
+            <button 
+              onClick={() => smoothScrollTo("contact")}
+              className="px-4 py-2 rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition">
               Request Demo
             </button>
             <button 
