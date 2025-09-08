@@ -1,21 +1,21 @@
-import { FaUsers, FaCloud, FaFileSignature } from "react-icons/fa"; // Font Awesome icons
+import { Users, Cloud, FileSignature } from "lucide-react"; // Using lucide-react for consistency
 
 export default function Solution() {
   const solutions = [
     {
-      title: "ConsecDesk",
-      text: "AI-powered client dashboard & support.",
-      icon: <FaUsers className="h-10 w-10 text-green-600" />,
+      name: "ConsecDesk",
+      desc: "AI-powered client dashboard & support.",
+      icon: Users,
     },
     {
-      title: "ConsecDrive",
-      text: "Secure file storage with AI tagging & smart search.",
-      icon: <FaCloud className="h-10 w-10 text-[#14B8A6]" />,
+      name: "ConsecDrive",
+      desc: "Secure file storage with AI tagging & smart search.",
+      icon: Cloud,
     },
     {
-      title: "ConsecQuote",
-      text: "AI-assisted proposals in minutes.",
-      icon: <FaFileSignature className="h-10 w-10 text-[#14B8A6]" />,
+      name: "ConsecQuote",
+      desc: "AI-assisted proposals in minutes.",
+      icon: FileSignature,
     },
   ];
 
@@ -36,20 +36,26 @@ export default function Solution() {
 
         {/* Solution Cards */}
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {solutions.map((solution, index) => (
-            <div
-              key={index}
-              className="p-6 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition text-center"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-teal-50 mx-auto mb-4">
-                {solution.icon}
+          {solutions.map((solution, index) => {
+            const Icon = solution.icon;
+            return (
+              <div
+                key={index}
+                className="p-6 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition text-center"
+              >
+                {/* Icon */}
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gray-200 mx-auto mb-4">
+                  <Icon className="text-[#1C94B5]" size={32} />
+                </div>
+
+                {/* Title & Description */}
+                <h3 className="text-xl font-semibold text-[#1C94B5]">
+                  {solution.name}
+                </h3>
+                <p className="mt-3 text-gray-600">{solution.desc}</p>
               </div>
-              <h3 className="text-xl font-semibold text-[#14B8A6]">
-                {solution.title}
-              </h3>
-              <p className="mt-3 text-gray-600">{solution.text}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

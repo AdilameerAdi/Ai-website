@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
     "@tailwindcss/vite": "^4.1.13",
+    "gapi-script": "^1.2.0",
     "jspdf": "^3.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.542.0",

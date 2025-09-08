@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiService } from "../services/api.js";
+import { FaMapMarkerAlt, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
 
 export default function ContactDemo() {
   const [formData, setFormData] = useState({
@@ -17,7 +18,7 @@ export default function ContactDemo() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(""); // Clear error when user starts typing
+    setError(""); 
   };
 
   const handleSubmit = async (e) => {
@@ -59,18 +60,40 @@ export default function ContactDemo() {
 
   return (
     <section className="bg-gray-50 py-20" id="contact">
-      <div className="max-w-4xl mx-auto px-6 lg:px-8">
-        {/* Heading */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
+      <div className="max-w-6xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-12">
+        
+        {/* Contact Info */}
+        <div className="space-y-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800">
-            Contact & Demo Request
+            Get In Touch
           </h2>
-          <p className="mt-4 text-lg text-gray-600">
-            Fill out the form and we’ll get back to you shortly.
+          <p className="text-lg text-gray-600">
+            We'd love to hear from you. Reach out via form or contact us directly.
           </p>
+          <div className="space-y-4 text-gray-700">
+            <div className="flex items-start gap-3">
+              <FaMapMarkerAlt className="text-[#1C94B5] mt-1" />
+              <span>
+                A2 111 Hinjewadi Hill, Phase 1 Xrbia, Marunji, Pune, 
+                Mulashi, Maharashtra, India, 411057
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <FaEnvelope className="text-[#1C94B5]" />
+              <a href="mailto:info@conseccomms.com" className="hover:underline">
+                info@conseccomms.com
+              </a>
+            </div>
+            <div className="flex items-center gap-3">
+              <FaPhoneAlt className="text-[#1C94B5]" />
+              <a href="tel:+912067024727" className="hover:underline">
+                +91 20 6702 4727
+              </a>
+            </div>
+          </div>
         </div>
 
-        {/* Form */}
+        {/* Contact Form */}
         <form
           onSubmit={handleSubmit}
           className="bg-white p-8 rounded-2xl shadow-md space-y-6"
@@ -83,7 +106,7 @@ export default function ContactDemo() {
               onChange={handleChange}
               placeholder="Full Name *"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
             />
             <input
               type="email"
@@ -92,7 +115,7 @@ export default function ContactDemo() {
               onChange={handleChange}
               placeholder="Email Address *"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
             />
           </div>
 
@@ -103,7 +126,7 @@ export default function ContactDemo() {
               value={formData.company}
               onChange={handleChange}
               placeholder="Company Name"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
             />
             <input
               type="tel"
@@ -111,7 +134,7 @@ export default function ContactDemo() {
               value={formData.phone}
               onChange={handleChange}
               placeholder="Phone Number"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
             />
           </div>
 
@@ -119,7 +142,7 @@ export default function ContactDemo() {
             name="subject"
             value={formData.subject}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
           >
             <option value="General Inquiry">General Inquiry</option>
             <option value="Demo Request">Demo Request</option>
@@ -136,7 +159,7 @@ export default function ContactDemo() {
             placeholder="Your Message *"
             rows="5"
             required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#1C94B5]"
           />
 
           {error && (
@@ -148,7 +171,7 @@ export default function ContactDemo() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-6 bg-[#14B8A6] text-white rounded-lg font-semibold hover:bg-[#0d9488] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 px-6 bg-[#1C94B5] text-white rounded-lg font-semibold hover:bg-[#14748B] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Sending..." : "Send Request"}
           </button>

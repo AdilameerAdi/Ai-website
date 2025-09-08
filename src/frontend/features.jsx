@@ -6,31 +6,31 @@ export default function Features() {
     {
       title: "ConsecDesk",
       description: "Dashboard • Tickets • AI auto-replies & summaries.",
-      icon: <FaTachometerAlt className="h-10 w-10 text-[#14B8A6]" />,
+      icon: <FaTachometerAlt className="h-10 w-10 text-[#1C94B5]" />,
       bullets: [
-        { text: "Client Dashboard", icon: <FaTachometerAlt className="text-[#14B8A6]" /> },
-        { text: "Ticket Management", icon: <FaTicketAlt className="text-[#14B8A6]" /> },
-        { text: "AI Auto-Replies & Summaries", icon: <FaRobot className="text-[#14B8A6]" /> },
+        { text: "Client Dashboard", icon: <FaTachometerAlt className="text-[#1C94B5]" /> },
+        { text: "Ticket Management", icon: <FaTicketAlt className="text-[#1C94B5]" /> },
+        { text: "AI Auto-Replies & Summaries", icon: <FaRobot className="text-[#1C94B5]" /> },
       ],
     },
     {
       title: "ConsecDrive",
       description: "Upload/Download • Folders • AI tagging & semantic search.",
-      icon: <FaCloudUploadAlt className="h-10 w-10 text-green-600" />,
+      icon: <FaCloudUploadAlt className="h-10 w-10 text-[#1C94B5]" />,
       bullets: [
-        { text: "Secure Upload & Download", icon: <FaCloudUploadAlt className="text-green-500" /> },
-        { text: "Organized Folders", icon: <FaFolderOpen className="text-green-500" /> },
-        { text: "AI Tagging & Smart Search", icon: <FaSearch className="text-green-500" /> },
+        { text: "Secure Upload & Download", icon: <FaCloudUploadAlt className="text-[#1C94B5]" /> },
+        { text: "Organized Folders", icon: <FaFolderOpen className="text-[#1C94B5]" /> },
+        { text: "AI Tagging & Smart Search", icon: <FaSearch className="text-[#1C94B5]" /> },
       ],
     },
     {
       title: "ConsecQuote",
       description: "Create/Edit/PDF • Track status • AI suggestions & pricing.",
-      icon: <FaFileAlt className="h-10 w-10 text-[#14B8A6]" />,
+      icon: <FaFileAlt className="h-10 w-10 text-[#1C94B5]" />,
       bullets: [
-        { text: "Create, Edit & Export PDF", icon: <FaEdit className="text-[#14B8A6]" /> },
-        { text: "Track Proposal Status", icon: <FaCheckCircle className="text-[#14B8A6]" /> },
-        { text: "AI Suggestions & Pricing", icon: <FaRobot className="text-[#14B8A6]" /> },
+        { text: "Create, Edit & Export PDF", icon: <FaEdit className="text-[#1C94B5]" /> },
+        { text: "Track Proposal Status", icon: <FaCheckCircle className="text-[#1C94B5]" /> },
+        { text: "AI Suggestions & Pricing", icon: <FaRobot className="text-[#1C94B5]" /> },
       ],
     },
   ];
@@ -61,12 +61,12 @@ export default function Features() {
                   hover={true}
                   className="text-center"
                 >
-                  <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-teal-50 mx-auto mb-4 sm:mb-6">
+                  <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#E6F4F8] mx-auto mb-4 sm:mb-6">
                     <div className="text-2xl sm:text-3xl">
                       {feature.icon}
                     </div>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-[#14B8A6]">
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#1C94B5]">
                     {feature.title}
                   </h3>
                   <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-600">{feature.description}</p>

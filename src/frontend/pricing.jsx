@@ -135,7 +135,7 @@ export default function Pricing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Heading */}
           <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1C94B5]">
               Pricing Plans
             </h2>
             <p className="mt-3 sm:mt-4 text-base sm:text-lg text-gray-600">
@@ -156,14 +156,14 @@ export default function Pricing() {
                   onClick={() => setSelectedPlan(plan.name)}
                   className={`transition cursor-pointer border-2 ${
                     selectedPlan === plan.name
-                      ? "border-[#14B8A6] ring-2 ring-[#14B8A6] ring-opacity-30"
-                      : "border-gray-200 hover:shadow-lg hover:border-[#14B8A6]"
+                      ? "border-[#1C94B5] ring-2 ring-[#1C94B5] ring-opacity-30"
+                      : "border-gray-200 hover:shadow-lg hover:border-[#1C94B5]"
                   }`}
                   hover={false}
                 >
                   {/* Title */}
                   <div className="text-center sm:text-left">
-                    <h3 className="text-lg sm:text-xl font-semibold text-[#14B8A6]">{plan.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-semibold text-[#1C94B5]">{plan.name}</h3>
                     <p className="mt-1 text-sm sm:text-base text-gray-600">{plan.users}</p>
 
                     {/* Price */}
@@ -171,7 +171,7 @@ export default function Pricing() {
                     <p className="text-sm text-gray-500">{plan.period}</p>
 
                     {/* Storage Info */}
-                    <p className="mt-2 text-sm text-[#14B8A6] font-medium">{plan.storage} Storage</p>
+                    <p className="mt-2 text-sm text-[#1C94B5] font-medium">{plan.storage} Storage</p>
                   </div>
 
                   {/* Features as simple list with dots */}
@@ -180,7 +180,7 @@ export default function Pricing() {
                       <li key={i} className="text-left">{feature}</li>
                     ))}
                     {plan.features.length > 6 && (
-                      <li className="text-[#14B8A6] font-medium text-left">+{plan.features.length - 6} more features</li>
+                      <li className="text-[#1C94B5] font-medium text-left">+{plan.features.length - 6} more features</li>
                     )}
                   </ul>
 
@@ -190,7 +190,6 @@ export default function Pricing() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (plan.name === "Start Free") {
-                          // Scroll to contact form for free trial signup
                           const contactSection = document.getElementById('contact');
                           if (contactSection) {
                             contactSection.scrollIntoView({ behavior: 'smooth' });
@@ -202,6 +201,11 @@ export default function Pricing() {
                       variant={selectedPlan === plan.name ? "primary" : "outline"}
                       size="medium"
                       fullWidth={true}
+                      className={
+                        selectedPlan === plan.name
+                          ? "bg-[#1C94B5] hover:bg-[#187a97] text-white"
+                          : "border-[#1C94B5] text-[#1C94B5] hover:bg-[#187a97]"
+                      }
                     >
                       {plan.cta}
                     </ResponsiveButton>

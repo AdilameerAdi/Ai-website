@@ -6,7 +6,10 @@ export default function Hero({ setIsAuthModalOpen }) {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   return (
-    <section id="home" className="relative bg-gradient-to-r from-white via-teal-50 to-teal-100 pt-20 sm:pt-24 lg:pt-32 pb-12 sm:pb-16 lg:pb-20">
+    <section
+      id="home"
+      className="relative bg-[#1C94B5] pt-20 sm:pt-24 lg:pt-18 pb-12 sm:pb-16 lg:pb-20"
+    >
       <div className="responsive-container">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-12">
           
@@ -14,11 +17,11 @@ export default function Hero({ setIsAuthModalOpen }) {
           <div className="flex-1 text-center lg:text-left">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-800 leading-tight">
               Inspiring Brilliance, <br />
-              <span className="text-[#14B8A6]">Streaming to Digital Horizons</span>
+              <span className="text-black">Streaming to Digital Horizons</span>
             </h1>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-gray-700 max-w-2xl mx-auto lg:mx-0">
               An AI-driven digital ecosystem for SMEs, powered by{" "}
-              <span className="font-semibold text-[#14B8A6]">ConsecIQ</span>. Manage client
+              <span className="font-semibold text-[#1C94B5]">ConsecIQ</span>. Manage client
               interactions, secure file storage, and proposals — all in one
               intelligent platform.
             </p>
@@ -28,7 +31,7 @@ export default function Hero({ setIsAuthModalOpen }) {
               <ResponsiveButton 
                 onClick={() => setIsDemoModalOpen(true)}
                 size="large"
-                className="shadow-md"
+                className="shadow-md bg-lightgreen hover:bg-[#187a97] text-white"
               >
                 Request Demo
               </ResponsiveButton>
@@ -36,6 +39,8 @@ export default function Hero({ setIsAuthModalOpen }) {
                 onClick={() => setIsAuthModalOpen(true)}
                 variant="outline"
                 size="large"
+               className="bg-lightgreen hover:bg-[#187a97] text-white"
+
               >
                 Login
               </ResponsiveButton>
@@ -44,11 +49,7 @@ export default function Hero({ setIsAuthModalOpen }) {
 
           {/* Right Image / Illustration */}
           <div className="flex-1 flex justify-center lg:justify-end mt-8 lg:mt-0">
-            <img
-              src="../img/hero-illustration.png"
-              alt="AI Digital Ecosystem"
-              className="w-full max-w-sm sm:max-w-md lg:max-w-lg drop-shadow-xl"
-            />
+           
           </div>
         </div>
       </div>
