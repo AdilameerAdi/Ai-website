@@ -1,4 +1,5 @@
-import { FaSignOutAlt, FaHome, FaBriefcase, FaFolder, FaFileAlt, FaCog, FaBell } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaSignOutAlt, FaHome, FaBriefcase, FaFolder, FaFileAlt, FaCog, FaBell, FaBars, FaTimes } from 'react-icons/fa';
 
 export default function AppLayout({ 
   appName, 
@@ -12,6 +13,7 @@ export default function AppLayout({
   onSettingsClick,
   children 
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const mainApps = [
     { id: 'dashboard', name: 'Dashboard', icon: <FaHome />, route: '/dashboard' },
@@ -27,11 +29,17 @@ export default function AppLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+              >
+                {sidebarOpen ? <FaTimes /> : <FaBars />}
+              </button>
               <button 
                 onClick={() => navigate('/dashboard')}
                 className="flex items-center gap-3 hover:opacity-80 transition"
               >
-                <h1 className="text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
               </button>
               <div className="hidden md:flex items-center gap-1">
                 <span className="text-gray-400">/</span>
@@ -90,9 +98,19 @@ export default function AppLayout({
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-[calc(100vh-4rem)] relative">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-md border-r border-gray-200">
+        <aside className={`${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } fixed lg:relative lg:translate-x-0 w-64 bg-white shadow-md border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out lg:transition-none h-full`}>
           {/* App Header */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -127,7 +145,7 @@ export default function AppLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}
         </main>
       </div>

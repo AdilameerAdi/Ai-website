@@ -13,7 +13,7 @@ import Pricing from "../frontend/pricing";
 import Roadmap from "../frontend/roadmap";
 import FAQs from "../frontend/faqs";
 import ContactDemo from "../frontend/contact";
-import FeedbackForm from "../frontend/feedback";
+
 import Footer from "../frontend/Footer";
 import AuthModal from "../login/Auth";
 import AdminLogin from "../components/AdminLogin";
@@ -72,7 +72,6 @@ export default function LandingPage({ onLoginSuccess }) {
       <Roadmap />
       <FAQs />
       <ContactDemo />
-      <FeedbackForm />
       <Footer />
       
       {/* Admin Login Button - Fixed position */}

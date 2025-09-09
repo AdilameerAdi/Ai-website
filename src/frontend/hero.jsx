@@ -29,13 +29,6 @@ export default function Hero({ setIsAuthModalOpen }) {
             {/* Buttons */}
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
               <ResponsiveButton 
-                onClick={() => setIsDemoModalOpen(true)}
-                size="large"
-                className="shadow-md bg-lightgreen hover:bg-[#187a97] text-white"
-              >
-                Request Demo
-              </ResponsiveButton>
-              <ResponsiveButton 
                 onClick={() => setIsAuthModalOpen(true)}
                 variant="outline"
                 size="large"

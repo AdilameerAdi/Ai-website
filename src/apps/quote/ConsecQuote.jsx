@@ -32,72 +32,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
   const [editingProposal, setEditingProposal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // Mock data for demo purposes (will be loaded from database)
-  const [mockProposals] = useState([
-    { 
-      id: 1, 
-      title: 'Website Development Project', 
-      client: 'TechCorp Inc.', 
-      amount: '$15,000', 
-      status: 'Pending', 
-      created: '2024-01-15',
-      items: [
-        { name: 'Frontend Development', quantity: 1, rate: 8000, total: 8000 },
-        { name: 'Backend Development', quantity: 1, rate: 5000, total: 5000 },
-        { name: 'Testing & QA', quantity: 1, rate: 2000, total: 2000 }
-      ],
-      aiAnalysis: {
-        winProbability: 78,
-        suggestedPricing: 16500,
-        marketAnalysis: 'Based on current market trends, website development projects are in high demand with 15-20% growth rate.',
-        riskFactors: ['Scope creep potential', 'Timeline dependencies', 'Resource availability'],
-        recommendations: 'Consider adding maintenance and support package for additional 20% recurring revenue.',
-        confidence: 85
-      }
-    },
-    { 
-      id: 2, 
-      title: 'Mobile App Development', 
-      client: 'StartupXYZ', 
-      amount: '$25,000', 
-      status: 'Approved', 
-      created: '2024-01-10',
-      items: [
-        { name: 'iOS App Development', quantity: 1, rate: 12000, total: 12000 },
-        { name: 'Android App Development', quantity: 1, rate: 10000, total: 10000 },
-        { name: 'API Integration', quantity: 1, rate: 3000, total: 3000 }
-      ],
-      aiAnalysis: {
-        winProbability: 92,
-        suggestedPricing: 27500,
-        marketAnalysis: 'Market analysis shows competitive pricing for mobile app development ranges from $20,000 to $32,500.',
-        riskFactors: ['Technical complexity', 'Client communication', 'Integration challenges'],
-        recommendations: 'Recommend phased delivery approach to reduce risk and improve cash flow.',
-        confidence: 90
-      }
-    },
-    { 
-      id: 3, 
-      title: 'E-commerce Platform', 
-      client: 'RetailPro Ltd.', 
-      amount: '$35,000', 
-      status: 'Draft', 
-      created: '2024-01-12',
-      items: [
-        { name: 'Platform Development', quantity: 1, rate: 20000, total: 20000 },
-        { name: 'Payment Integration', quantity: 1, rate: 8000, total: 8000 },
-        { name: 'Admin Dashboard', quantity: 1, rate: 7000, total: 7000 }
-      ],
-      aiAnalysis: {
-        winProbability: 65,
-        suggestedPricing: 38500,
-        marketAnalysis: 'Industry benchmarks indicate strong market potential for e-commerce platform with average deal size of $38,500.',
-        riskFactors: ['Budget constraints', 'Market competition', 'Regulatory requirements'],
-        recommendations: 'Suggest including training and documentation to increase value proposition by 15%.',
-        confidence: 82
-      }
-    }
-  ]);
+  
   
   const [selectedProposal, setSelectedProposal] = useState(null);
 
@@ -115,15 +50,14 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       setLoading(true);
       const result = await quoteService.getUserProposals(user.id);
       if (result.success) {
-        // If no database proposals, use mock data for demo
-        setProposals(result.data.length > 0 ? result.data : mockProposals);
+        setProposals(result.data || []);
       } else {
         console.error('Error loading proposals:', result.error);
-        setProposals(mockProposals); // Fallback to mock data
+        setProposals([]);
       }
     } catch (error) {
       console.error('Error loading proposals:', error);
-      setProposals(mockProposals); // Fallback to mock data
+      setProposals([])
     } finally {
       setLoading(false);
     }
@@ -187,12 +121,8 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
         status
       };
 
-      let result;
-      if (editingProposal) {
-        result = await quoteService.updateProposal(editingProposal.id, user.id, proposalData);
-      } else {
-        result = await quoteService.createProposal(proposalData, user.id);
-      }
+      const result = await quoteService.createProposal(proposalData, user.id);
+
 
       if (result.success) {
         alert(`Proposal ${editingProposal ? 'updated' : 'created'} successfully!`);

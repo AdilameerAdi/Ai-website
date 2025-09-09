@@ -951,15 +951,15 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
             
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
+              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Open Tickets</p>
-                    <p className="text-3xl font-bold text-[#14B8A6] mt-2">{dashboardMetrics.openTickets}</p>
-                    <p className="text-xs text-gray-400 mt-1">Active support tickets</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.openTickets}</p>
+                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Active support tickets</p>
                   </div>
-                  <FaTicketAlt className="text-4xl text-[#14B8A6] opacity-20" />
+                  <FaTicketAlt className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
                 </div>
               </div>
               
@@ -974,31 +974,31 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Resolved Today</p>
-                    <p className="text-3xl font-bold text-[#14B8A6] mt-2">{dashboardMetrics.resolvedToday}</p>
-                    <p className="text-xs text-gray-400 mt-1">Last 24 hours</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.resolvedToday}</p>
+                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Last 24 hours</p>
                   </div>
-                  <FaTicketAlt className="text-4xl text-[#14B8A6] opacity-20" />
+                  <FaTicketAlt className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Client Satisfaction</p>
-                    <p className="text-3xl font-bold text-[#14B8A6] mt-2">{dashboardMetrics.clientSatisfaction}★</p>
-                    <p className="text-xs text-gray-400 mt-1">Average rating</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.clientSatisfaction}★</p>
+                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Average rating</p>
                   </div>
-                  <FaStar className="text-4xl text-[#14B8A6] opacity-20" />
+                  <FaStar className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
                 </div>
               </div>
             </div>
 
             {/* ConsecIQ AI Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
                 <div className="flex items-center gap-3 mb-4">
                   <FaBrain className="text-2xl text-blue-600" />
@@ -1146,29 +1146,38 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto shadow-sm border border-gray-200 rounded-lg">
+                  <table className="w-full min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AI Analysis</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Title</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Priority</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Created</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">AI Analysis</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {tickets.map((ticket) => (
                         <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{ticket.id}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">#{ticket.id}</td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div>
-                              <div className="text-sm text-gray-900 font-medium">{ticket.title}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{ticket.description}</div>
+                              <div className="text-xs sm:text-sm text-gray-900 font-medium truncate">{ticket.title}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-xs sm:block hidden">{ticket.description}</div>
+                              <div className="text-xs text-gray-500 sm:hidden">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                                  ticket.priority === 'high' || ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                  ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                                </span>
+                              </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               ticket.priority === 'high' || ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
                               ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
@@ -1177,20 +1186,21 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                               {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
                               ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
                               ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {ticket.status?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              <span className="hidden sm:inline">{ticket.status?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                              <span className="sm:hidden">{ticket.status?.charAt(0).toUpperCase()}</span>
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
                             {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : ticket.created}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden lg:table-cell">
                             {ticket.ai_category && (
                               <div className="flex items-center gap-1">
                                 <FaBrain className="text-blue-500" />

@@ -37,6 +37,59 @@ const getAdminClient = () => {
 };
 
 const adminService = {
+  // Create missing user for orphaned proposals
+  createMissingUser: async (userId) => {
+    try {
+      console.log('🔧 Creating missing user for ID:', userId);
+      
+      // First, get proposal details to use as user data
+      const { data: proposals, error: proposalError } = await adminClient
+        .from('proposals')
+        .select('client_name, client_email, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(1);
+        
+      if (proposalError || !proposals || proposals.length === 0) {
+        console.error('❌ Could not find proposals for user:', userId);
+        return { success: false, error: 'No proposals found for user' };
+      }
+      
+      const proposal = proposals[0];
+      console.log('📝 Using proposal data:', proposal);
+      
+      // Create user record with proposal client information
+      const userData = {
+        id: userId,
+        full_name: proposal.client_name || 'Unknown Client',
+        email: proposal.client_email || `${userId}@unknown.com`,
+        created_at: proposal.created_at,
+        updated_at: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      console.log('👤 Creating user with data:', userData);
+      
+      const { data: newUser, error: insertError } = await adminClient
+        .from('users')
+        .insert([userData])
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error('❌ Failed to create user:', insertError);
+        return { success: false, error: insertError.message };
+      }
+      
+      console.log('✅ Successfully created missing user:', newUser);
+      return { success: true, user: newUser };
+      
+    } catch (error) {
+      console.error('❌ Exception creating missing user:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
   // Get admin dashboard statistics
   getDashboardStats: async () => {
     try {
@@ -337,7 +390,7 @@ const adminService = {
       const adminClient = getAdminClient();
       const activities = [];
 
-      // Get recent proposals
+      // Get recent proposals (without database joins to avoid relationship errors)
       try {
         const { data: proposals } = await adminClient
           .from('proposals')
@@ -347,15 +400,18 @@ const adminService = {
 
         if (proposals) {
           proposals.forEach(proposal => {
+            // Get user info from users table or fallback to user ID
+            const userName = `User ${proposal.user_id?.substring(0, 8) || 'Unknown'}`;
             activities.push({
               id: `proposal-${proposal.id}`,
-              action: 'Proposal submitted',
-              user: `User ${proposal.user_id?.substring(0, 8) || 'Unknown'}`,
+              action: 'New proposal created',
+              user: userName,
               details: `"${proposal.title}" - $${proposal.total_amount || 0}`,
               time: formatTimeAgo(proposal.created_at),
               type: 'proposal',
               status: proposal.status,
-              timestamp: proposal.created_at
+              timestamp: proposal.created_at,
+              userId: proposal.user_id
             });
           });
         }
@@ -363,7 +419,7 @@ const adminService = {
         console.error('Error getting recent proposals:', error);
       }
 
-      // Get recent file uploads
+      // Get recent file uploads (without database joins to avoid relationship errors)
       try {
         const { data: files } = await adminClient
           .from('files')
@@ -373,14 +429,16 @@ const adminService = {
 
         if (files) {
           files.forEach(file => {
+            const userName = `User ${file.user_id?.substring(0, 8) || 'Unknown'}`;
             activities.push({
               id: `file-${file.id}`,
-              action: 'File uploaded',
-              user: `User ${file.user_id?.substring(0, 8) || 'Unknown'}`,
+              action: 'New file uploaded',
+              user: userName,
               details: `${file.filename} (${formatFileSize(file.file_size)})`,
               time: formatTimeAgo(file.created_at),
               type: 'file',
-              timestamp: file.created_at
+              timestamp: file.created_at,
+              userId: file.user_id
             });
           });
         }
@@ -388,7 +446,7 @@ const adminService = {
         console.error('Error getting recent files:', error);
       }
 
-      // Get recent tickets
+      // Get recent tickets (without database joins to avoid relationship errors)
       try {
         const { data: tickets } = await adminClient
           .from('tickets')
@@ -398,15 +456,17 @@ const adminService = {
 
         if (tickets) {
           tickets.forEach(ticket => {
+            const userName = `User ${ticket.user_id?.substring(0, 8) || 'Unknown'}`;
             activities.push({
               id: `ticket-${ticket.id}`,
-              action: 'Support ticket created',
-              user: `User ${ticket.user_id?.substring(0, 8) || 'Unknown'}`,
+              action: 'New support ticket created',
+              user: userName,
               details: `"${ticket.title}" (${ticket.priority || 'normal'} priority)`,
               time: formatTimeAgo(ticket.created_at),
               type: 'ticket',
               status: ticket.status,
-              timestamp: ticket.created_at
+              timestamp: ticket.created_at,
+              userId: ticket.user_id
             });
           });
         }
@@ -467,6 +527,37 @@ const adminService = {
         console.error('Error getting recent leads:', error);
       }
 
+      // Get recent user login/logout activities (skip if table doesn't exist)
+      try {
+        const { data: userActivities } = await adminClient
+          .from('user_activities')
+          .select('id, user_id, activity_type, description, timestamp')
+          .in('activity_type', ['login', 'logout'])
+          .order('timestamp', { ascending: false })
+          .limit(10);
+
+        if (userActivities) {
+          userActivities.forEach(activity => {
+            const actionText = activity.activity_type === 'login' ? 'User logged in' : 'User logged out';
+            const userName = `User ${activity.user_id?.substring(0, 8) || 'Unknown'}`;
+            activities.push({
+              id: `activity-${activity.id}`,
+              action: actionText,
+              user: userName,
+              details: activity.description || `${activity.activity_type} event`,
+              time: formatTimeAgo(activity.timestamp),
+              type: 'auth',
+              subtype: activity.activity_type,
+              timestamp: activity.timestamp,
+              userId: activity.user_id
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error getting user login/logout activities:', error);
+        // Table might not exist yet - this is non-critical, continue without login activities
+      }
+
       // Sort by timestamp and limit
       activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       
@@ -510,76 +601,297 @@ const adminService = {
     }
   },
 
-  // Get REAL user activity data from database
+  // Get COMPREHENSIVE user activity data from database for detailed reporting
   getUserActivityData: async (startDate, endDate) => {
     try {
       const adminClient = getAdminClient();
-      const activityData = [];
-      const dateMap = new Map();
+      console.log('📊 Generating comprehensive user activity report...');
+      console.log('📅 Date range:', startDate, 'to', endDate);
       
-      // Get all activity within date range
-      const [tickets, files, proposals] = await Promise.all([
+      // Get all users with their basic info
+      const { data: allUsers, error: usersError } = await adminClient
+        .from('users')
+        .select('id, full_name, email, created_at, last_login, role, subscription_plan');
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      console.log('👥 Found', allUsers?.length || 0, 'total users');
+
+      // Get all activity data within date range with user details
+      const [tickets, files, proposals, userActivities, newUsers] = await Promise.all([
+        // Get tickets with user info
         adminClient
           .from('tickets')
-          .select('user_id, created_at')
+          .select(`
+            id, user_id, title, created_at, status, priority,
+            users:user_id (full_name, email)
+          `)
           .gte('created_at', startDate)
           .lte('created_at', endDate),
+          
+        // Get files with user info
         adminClient
           .from('files')
-          .select('user_id, created_at')
+          .select(`
+            id, user_id, filename, file_size, created_at, file_type,
+            users:user_id (full_name, email)
+          `)
           .gte('created_at', startDate)
           .lte('created_at', endDate),
+          
+        // Get proposals with user info
         adminClient
           .from('proposals')
-          .select('user_id, created_at')
+          .select(`
+            id, user_id, title, total_amount, created_at, status,
+            users:user_id (full_name, email)
+          `)
+          .gte('created_at', startDate)
+          .lte('created_at', endDate),
+          
+        // Get login/logout activities with user info
+        adminClient
+          .from('user_activities')
+          .select(`
+            id, user_id, activity_type, timestamp, description,
+            users:user_id (full_name, email)
+          `)
+          .in('activity_type', ['login', 'logout'])
+          .gte('timestamp', startDate)
+          .lte('timestamp', endDate),
+          
+        // Get new user registrations within date range
+        adminClient
+          .from('users')
+          .select('id, full_name, email, created_at, role, subscription_plan')
           .gte('created_at', startDate)
           .lte('created_at', endDate)
       ]);
+
+      console.log('📈 Activity summary:');
+      console.log('   🎫 Tickets:', tickets.data?.length || 0);
+      console.log('   📁 Files:', files.data?.length || 0);
+      console.log('   💼 Proposals:', proposals.data?.length || 0);
+      console.log('   🔑 Login/Logout events:', userActivities.data?.length || 0);
+      console.log('   🆕 New users:', newUsers.data?.length || 0);
+
+      // Create user activity map
+      const userActivityMap = new Map();
       
-      // Process data by date
-      const processActivity = (items, type) => {
-        items.data?.forEach(item => {
-          const date = new Date(item.created_at).toISOString().split('T')[0];
-          if (!dateMap.has(date)) {
-            dateMap.set(date, {
-              date,
-              newTickets: 0,
-              newFiles: 0,
-              newProposals: 0,
-              activeUsers: new Set(),
-              totalActivity: 0
-            });
-          }
-          const dayData = dateMap.get(date);
-          dayData.activeUsers.add(item.user_id);
-          dayData.totalActivity++;
+      // Initialize all users in the map
+      allUsers?.forEach(user => {
+        userActivityMap.set(user.id, {
+          userId: user.id,
+          userFullName: user.full_name || 'Unknown',
+          userEmail: user.email,
+          accountCreated: user.created_at,
+          lastLogin: user.last_login,
+          role: user.role || 'user',
+          subscriptionPlan: user.subscription_plan || 'free',
+          isNewUser: newUsers.data?.some(newUser => newUser.id === user.id),
           
-          if (type === 'tickets') dayData.newTickets++;
-          if (type === 'files') dayData.newFiles++;
-          if (type === 'proposals') dayData.newProposals++;
-        });
-      };
-      
-      processActivity(tickets, 'tickets');
-      processActivity(files, 'files');
-      processActivity(proposals, 'proposals');
-      
-      // Convert to array and format
-      dateMap.forEach((value, key) => {
-        activityData.push({
-          date: key,
-          activeUsers: value.activeUsers.size,
-          newTickets: value.newTickets,
-          newFiles: value.newFiles,
-          newProposals: value.newProposals,
-          totalActivity: value.totalActivity
+          // Activity counters
+          totalActivities: 0,
+          ticketsCreated: 0,
+          filesUploaded: 0,
+          proposalsCreated: 0,
+          loginSessions: 0,
+          
+          // Activity details
+          ticketsList: [],
+          filesList: [],
+          proposalsList: [],
+          loginsList: [],
+          
+          // Financial data
+          totalProposalValue: 0,
+          averageProposalValue: 0,
+          
+          // Storage data
+          totalStorageUsed: 0,
+          fileCount: 0,
+          
+          // Activity timeline
+          firstActivity: null,
+          lastActivity: null,
+          activeDays: new Set()
         });
       });
-      
-      // Sort by date
-      activityData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      return { success: true, data: activityData };
+      // Process tickets
+      tickets.data?.forEach(ticket => {
+        const userStats = userActivityMap.get(ticket.user_id);
+        if (userStats) {
+          userStats.ticketsCreated++;
+          userStats.totalActivities++;
+          userStats.ticketsList.push({
+            id: ticket.id,
+            title: ticket.title,
+            status: ticket.status,
+            priority: ticket.priority,
+            createdAt: ticket.created_at
+          });
+          
+          // Update activity timeline
+          const activityDate = ticket.created_at;
+          if (!userStats.firstActivity || activityDate < userStats.firstActivity) {
+            userStats.firstActivity = activityDate;
+          }
+          if (!userStats.lastActivity || activityDate > userStats.lastActivity) {
+            userStats.lastActivity = activityDate;
+          }
+          userStats.activeDays.add(activityDate.split('T')[0]);
+        }
+      });
+
+      // Process files
+      files.data?.forEach(file => {
+        const userStats = userActivityMap.get(file.user_id);
+        if (userStats) {
+          userStats.filesUploaded++;
+          userStats.totalActivities++;
+          userStats.fileCount++;
+          userStats.totalStorageUsed += parseInt(file.file_size) || 0;
+          userStats.filesList.push({
+            id: file.id,
+            filename: file.filename,
+            fileSize: parseInt(file.file_size) || 0,
+            fileType: file.file_type,
+            createdAt: file.created_at
+          });
+          
+          // Update activity timeline
+          const activityDate = file.created_at;
+          if (!userStats.firstActivity || activityDate < userStats.firstActivity) {
+            userStats.firstActivity = activityDate;
+          }
+          if (!userStats.lastActivity || activityDate > userStats.lastActivity) {
+            userStats.lastActivity = activityDate;
+          }
+          userStats.activeDays.add(activityDate.split('T')[0]);
+        }
+      });
+
+      // Process proposals
+      proposals.data?.forEach(proposal => {
+        const userStats = userActivityMap.get(proposal.user_id);
+        if (userStats) {
+          userStats.proposalsCreated++;
+          userStats.totalActivities++;
+          const proposalValue = parseFloat(proposal.total_amount) || 0;
+          userStats.totalProposalValue += proposalValue;
+          userStats.proposalsList.push({
+            id: proposal.id,
+            title: proposal.title,
+            totalAmount: proposalValue,
+            status: proposal.status,
+            createdAt: proposal.created_at
+          });
+          
+          // Update activity timeline
+          const activityDate = proposal.created_at;
+          if (!userStats.firstActivity || activityDate < userStats.firstActivity) {
+            userStats.firstActivity = activityDate;
+          }
+          if (!userStats.lastActivity || activityDate > userStats.lastActivity) {
+            userStats.lastActivity = activityDate;
+          }
+          userStats.activeDays.add(activityDate.split('T')[0]);
+        }
+      });
+
+      // Process user activities (login/logout)
+      userActivities.data?.forEach(activity => {
+        const userStats = userActivityMap.get(activity.user_id);
+        if (userStats && activity.activity_type === 'login') {
+          userStats.loginSessions++;
+          userStats.totalActivities++;
+          userStats.loginsList.push({
+            id: activity.id,
+            activityType: activity.activity_type,
+            timestamp: activity.timestamp,
+            description: activity.description
+          });
+          
+          // Update activity timeline
+          const activityDate = activity.timestamp;
+          if (!userStats.firstActivity || activityDate < userStats.firstActivity) {
+            userStats.firstActivity = activityDate;
+          }
+          if (!userStats.lastActivity || activityDate > userStats.lastActivity) {
+            userStats.lastActivity = activityDate;
+          }
+          userStats.activeDays.add(activityDate.split('T')[0]);
+        }
+      });
+
+      // Calculate averages and format data
+      const reportData = Array.from(userActivityMap.values()).map(userStats => {
+        // Calculate average proposal value
+        userStats.averageProposalValue = userStats.proposalsCreated > 0 
+          ? userStats.totalProposalValue / userStats.proposalsCreated 
+          : 0;
+        
+        // Convert active days to count
+        const activeDaysCount = userStats.activeDays.size;
+        
+        return {
+          // User identification
+          userId: userStats.userId,
+          userFullName: userStats.userFullName,
+          userEmail: userStats.userEmail,
+          role: userStats.role,
+          subscriptionPlan: userStats.subscriptionPlan,
+          
+          // Account info
+          accountCreated: userStats.accountCreated,
+          lastLogin: userStats.lastLogin,
+          isNewUser: userStats.isNewUser,
+          
+          // Activity summary
+          totalActivities: userStats.totalActivities,
+          activeDays: activeDaysCount,
+          firstActivity: userStats.firstActivity,
+          lastActivity: userStats.lastActivity,
+          
+          // Specific activities
+          ticketsCreated: userStats.ticketsCreated,
+          filesUploaded: userStats.filesUploaded,
+          proposalsCreated: userStats.proposalsCreated,
+          loginSessions: userStats.loginSessions,
+          
+          // Financial data
+          totalProposalValue: userStats.totalProposalValue,
+          averageProposalValue: userStats.averageProposalValue,
+          
+          // Storage data
+          totalStorageUsed: userStats.totalStorageUsed,
+          totalStorageUsedFormatted: formatFileSize(userStats.totalStorageUsed),
+          fileCount: userStats.fileCount,
+          
+          // Activity details (for detailed report)
+          ticketsList: userStats.ticketsList,
+          filesList: userStats.filesList,
+          proposalsList: userStats.proposalsList,
+          loginsList: userStats.loginsList,
+          
+          // Engagement metrics
+          engagementScore: calculateEngagementScore(userStats),
+          activityLevel: categorizeActivityLevel(userStats.totalActivities, activeDaysCount)
+        };
+      });
+
+      // Sort by total activity (most active first)
+      reportData.sort((a, b) => b.totalActivities - a.totalActivities);
+
+      console.log('✅ User activity report generated successfully!');
+      console.log('📊 Total users in report:', reportData.length);
+      console.log('🏆 Most active user:', reportData[0]?.userFullName || 'None');
+
+      return { success: true, data: reportData };
     } catch (error) {
       console.error('User activity data error:', error);
       return { success: false, error: error.message };
@@ -803,6 +1115,952 @@ const adminService = {
         }]
       };
     }
+  },
+
+  // Get comprehensive financial summary with user revenue data
+  getFinancialSummaryData: async () => {
+    try {
+      const adminClient = getAdminClient();
+      console.log('💰 Generating comprehensive financial summary report...');
+      
+      // Get current date for monthly calculations
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // Calculate date ranges for different periods
+      const thisMonthStart = new Date(currentYear, currentMonth, 1);
+      const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
+      const lastMonthEnd = new Date(currentYear, currentMonth, 0);
+      const yearStart = new Date(currentYear, 0, 1);
+      
+      console.log('📅 Analyzing financial data for:');
+      console.log('   📊 This Month:', thisMonthStart.toDateString(), 'to', now.toDateString());
+      console.log('   📊 Last Month:', lastMonthStart.toDateString(), 'to', lastMonthEnd.toDateString());
+      console.log('   📊 Year to Date:', yearStart.toDateString(), 'to', now.toDateString());
+
+      // Get all users with their proposal data
+      const { data: allUsers, error: usersError } = await adminClient
+        .from('users')
+        .select('id, full_name, email, created_at, role, subscription_plan');
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      console.log('👥 Found', allUsers?.length || 0, 'total users');
+
+      // Get all proposals (without automatic join to avoid relationship errors)
+      const { data: allProposals, error: proposalsError } = await adminClient
+        .from('proposals')
+        .select('id, user_id, title, total_amount, status, created_at, client_name, client_company')
+        .order('created_at', { ascending: false });
+
+      if (proposalsError) {
+        console.error('Error fetching proposals:', proposalsError);
+        // Don't throw error - continue with empty proposals array
+        console.warn('⚠️ Continuing with no proposal data due to database error');
+      }
+
+      console.log('💼 Found', allProposals?.length || 0, 'total proposals');
+
+      // Create user lookup map for efficient user data access
+      const userLookupMap = new Map();
+      allUsers?.forEach(user => {
+        userLookupMap.set(user.id, user);
+      });
+
+      // Create user revenue map
+      const userRevenueMap = new Map();
+      
+      // Initialize all users in the map
+      allUsers?.forEach(user => {
+        userRevenueMap.set(user.id, {
+          userId: user.id,
+          userFullName: user.full_name || 'Unknown User',
+          userEmail: user.email,
+          role: user.role || 'user',
+          subscriptionPlan: user.subscription_plan || 'free',
+          accountCreated: user.created_at,
+          
+          // Monthly revenue tracking
+          thisMonthRevenue: 0,
+          lastMonthRevenue: 0,
+          yearToDateRevenue: 0,
+          totalRevenue: 0,
+          
+          // Proposal tracking
+          thisMonthProposals: 0,
+          lastMonthProposals: 0,
+          yearToDateProposals: 0,
+          totalProposals: 0,
+          
+          // Revenue by status
+          draftRevenue: 0,
+          sentRevenue: 0,
+          acceptedRevenue: 0,
+          rejectedRevenue: 0,
+          
+          // Detailed proposal lists
+          thisMonthProposalsList: [],
+          lastMonthProposalsList: [],
+          allProposalsList: [],
+          
+          // Performance metrics
+          averageProposalValue: 0,
+          conversionRate: 0, // accepted / total
+          monthlyGrowth: 0 // this month vs last month
+        });
+      });
+
+      // Process all proposals and calculate revenue metrics
+      console.log('📊 Processing proposals and calculating revenue metrics...');
+      let processedCount = 0;
+      let skippedCount = 0;
+      
+      (allProposals || []).forEach(proposal => {
+        const userStats = userRevenueMap.get(proposal.user_id);
+        if (userStats) {
+          processedCount++;
+        } else {
+          skippedCount++;
+          console.warn('⚠️ Proposal found for unknown user:', proposal.user_id, '| Proposal:', proposal.title);
+        }
+        
+        if (userStats) {
+          const proposalValue = parseFloat(proposal.total_amount) || 0;
+          const proposalDate = new Date(proposal.created_at);
+          
+          // Add to total revenue and proposals
+          userStats.totalRevenue += proposalValue;
+          userStats.totalProposals++;
+          
+          // Add to proposal list
+          const proposalInfo = {
+            id: proposal.id,
+            title: proposal.title,
+            amount: proposalValue,
+            status: proposal.status,
+            client: proposal.client_name || proposal.client_company,
+            createdAt: proposal.created_at
+          };
+          userStats.allProposalsList.push(proposalInfo);
+          
+          // Revenue by status
+          switch (proposal.status?.toLowerCase()) {
+            case 'draft':
+              userStats.draftRevenue += proposalValue;
+              break;
+            case 'sent':
+              userStats.sentRevenue += proposalValue;
+              break;
+            case 'accepted':
+              userStats.acceptedRevenue += proposalValue;
+              break;
+            case 'rejected':
+              userStats.rejectedRevenue += proposalValue;
+              break;
+          }
+          
+          // This month
+          if (proposalDate >= thisMonthStart) {
+            userStats.thisMonthRevenue += proposalValue;
+            userStats.thisMonthProposals++;
+            userStats.thisMonthProposalsList.push(proposalInfo);
+          }
+          
+          // Last month
+          if (proposalDate >= lastMonthStart && proposalDate <= lastMonthEnd) {
+            userStats.lastMonthRevenue += proposalValue;
+            userStats.lastMonthProposals++;
+            userStats.lastMonthProposalsList.push(proposalInfo);
+          }
+          
+          // Year to date
+          if (proposalDate >= yearStart) {
+            userStats.yearToDateRevenue += proposalValue;
+            userStats.yearToDateProposals++;
+          }
+        }
+      });
+      
+      console.log('✅ Proposal processing completed:');
+      console.log('   📊 Processed proposals:', processedCount);
+      console.log('   ⚠️ Skipped proposals (unknown users):', skippedCount);
+
+      // Calculate performance metrics for each user
+      const financialData = Array.from(userRevenueMap.values()).map(userStats => {
+        // Calculate averages
+        userStats.averageProposalValue = userStats.totalProposals > 0 
+          ? userStats.totalRevenue / userStats.totalProposals 
+          : 0;
+        
+        // Calculate conversion rate (accepted proposals / total proposals)
+        const acceptedProposals = userStats.allProposalsList.filter(p => p.status?.toLowerCase() === 'accepted').length;
+        userStats.conversionRate = userStats.totalProposals > 0 
+          ? (acceptedProposals / userStats.totalProposals) * 100 
+          : 0;
+        
+        // Calculate monthly growth (this month vs last month)
+        userStats.monthlyGrowth = userStats.lastMonthRevenue > 0 
+          ? ((userStats.thisMonthRevenue - userStats.lastMonthRevenue) / userStats.lastMonthRevenue) * 100 
+          : userStats.thisMonthRevenue > 0 ? 100 : 0;
+        
+        return {
+          // User identification
+          userId: userStats.userId,
+          userFullName: userStats.userFullName,
+          userEmail: userStats.userEmail,
+          role: userStats.role,
+          subscriptionPlan: userStats.subscriptionPlan,
+          accountCreated: userStats.accountCreated,
+          
+          // Monthly revenue
+          thisMonthRevenue: userStats.thisMonthRevenue,
+          lastMonthRevenue: userStats.lastMonthRevenue,
+          yearToDateRevenue: userStats.yearToDateRevenue,
+          totalRevenue: userStats.totalRevenue,
+          
+          // Proposal counts
+          thisMonthProposals: userStats.thisMonthProposals,
+          lastMonthProposals: userStats.lastMonthProposals,
+          yearToDateProposals: userStats.yearToDateProposals,
+          totalProposals: userStats.totalProposals,
+          
+          // Revenue by status
+          draftRevenue: userStats.draftRevenue,
+          sentRevenue: userStats.sentRevenue,
+          acceptedRevenue: userStats.acceptedRevenue,
+          rejectedRevenue: userStats.rejectedRevenue,
+          
+          // Performance metrics
+          averageProposalValue: userStats.averageProposalValue,
+          conversionRate: userStats.conversionRate,
+          monthlyGrowth: userStats.monthlyGrowth,
+          
+          // Detailed lists (for detailed reporting)
+          thisMonthProposalsList: userStats.thisMonthProposalsList,
+          lastMonthProposalsList: userStats.lastMonthProposalsList,
+          allProposalsList: userStats.allProposalsList,
+          
+          // Revenue performance indicators
+          revenueCategory: categorizeRevenuePerformance(userStats.thisMonthRevenue),
+          isTopPerformer: userStats.thisMonthRevenue > 0 && userStats.conversionRate > 50,
+          isGrowing: userStats.monthlyGrowth > 0
+        };
+      });
+
+      // Sort by this month's revenue (highest first)
+      financialData.sort((a, b) => b.thisMonthRevenue - a.thisMonthRevenue);
+
+      // Calculate summary statistics
+      const summary = {
+        totalUsers: financialData.length,
+        activeUsers: financialData.filter(user => user.totalRevenue > 0).length,
+        thisMonthTotal: financialData.reduce((sum, user) => sum + user.thisMonthRevenue, 0),
+        lastMonthTotal: financialData.reduce((sum, user) => sum + user.lastMonthRevenue, 0),
+        yearToDateTotal: financialData.reduce((sum, user) => sum + user.yearToDateRevenue, 0),
+        totalRevenue: financialData.reduce((sum, user) => sum + user.totalRevenue, 0),
+        averageRevenuePerUser: 0,
+        topPerformers: financialData.filter(user => user.isTopPerformer).length,
+        growingUsers: financialData.filter(user => user.isGrowing).length,
+        monthlyGrowthRate: 0
+      };
+
+      // Calculate additional summary metrics
+      summary.averageRevenuePerUser = summary.activeUsers > 0 
+        ? summary.totalRevenue / summary.activeUsers 
+        : 0;
+      
+      summary.monthlyGrowthRate = summary.lastMonthTotal > 0 
+        ? ((summary.thisMonthTotal - summary.lastMonthTotal) / summary.lastMonthTotal) * 100 
+        : summary.thisMonthTotal > 0 ? 100 : 0;
+
+      console.log('✅ Financial summary generated successfully!');
+      console.log('💰 Summary Statistics:');
+      console.log('   📊 Total Users:', summary.totalUsers);
+      console.log('   💵 Active Revenue Users:', summary.activeUsers);
+      console.log('   🗓️ This Month Total: $' + summary.thisMonthTotal.toLocaleString());
+      console.log('   📈 Monthly Growth:', summary.monthlyGrowthRate.toFixed(1) + '%');
+      console.log('   🏆 Top Performers:', summary.topPerformers);
+
+      return { 
+        success: true, 
+        data: financialData,
+        summary: summary
+      };
+    } catch (error) {
+      console.error('Financial summary error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get all files with user information and statistics
+  getAllFiles: async (page = 1, limit = 50, search = '', filterType = 'all') => {
+    try {
+      const adminClient = getAdminClient();
+      const offset = (page - 1) * limit;
+      
+      console.log('🗂️ Fetching files from database...', { page, limit, search, filterType });
+      
+      let query = adminClient
+        .from('files')
+        .select(`
+          id, user_id, filename, original_filename, file_path, file_url, 
+          file_size, file_type, mime_type, folder_id, folder_path,
+          ai_summary, ai_keywords, ai_category, ai_priority, ai_suggested_tags,
+          ai_confidence, ai_content_analysis, user_tags, user_description,
+          is_favorite, upload_status, is_deleted, deleted_at, created_at, updated_at
+        `, { count: 'exact' })
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+      // Apply search filter
+      if (search) {
+        query = query.or(`filename.ilike.%${search}%,original_filename.ilike.%${search}%,ai_summary.ilike.%${search}%`);
+      }
+
+      // Apply type filter
+      if (filterType && filterType !== 'all') {
+        if (filterType === 'pdfs') {
+          query = query.eq('mime_type', 'application/pdf');
+        } else if (filterType === 'images') {
+          query = query.like('mime_type', 'image%');
+        } else if (filterType === 'documents') {
+          query = query.or('mime_type.eq.application/msword,mime_type.eq.application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        }
+      }
+
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+
+      const { data: files, count, error } = await query;
+
+      if (error) {
+        console.error('Error fetching files:', error);
+        throw error;
+      }
+
+      console.log('📁 Found', files?.length || 0, 'files (total:', count, ')');
+
+      // Get user information for files
+      const userIds = [...new Set(files?.map(file => file.user_id).filter(id => id))];
+      const { data: users } = await adminClient
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      const userMap = new Map(users?.map(user => [user.id, user]) || []);
+
+      // Enrich files with user data
+      const enrichedFiles = files?.map(file => ({
+        ...file,
+        users: userMap.get(file.user_id) || { full_name: 'Unknown', last_name: '', email: 'unknown@example.com' }
+      })) || [];
+
+      return {
+        success: true,
+        data: enrichedFiles,
+        totalCount: count || 0,
+        currentPage: page,
+        totalPages: Math.ceil((count || 0) / limit)
+      };
+    } catch (error) {
+      console.error('Get files error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get file statistics for dashboard
+  getFileStats: async () => {
+    try {
+      const adminClient = getAdminClient();
+      
+      console.log('📊 Calculating file statistics...');
+
+      // Get total files count
+      const { count: totalFiles } = await adminClient
+        .from('files')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false);
+
+      // Calculate total storage used
+      const { data: allFiles } = await adminClient
+        .from('files')
+        .select('file_size')
+        .eq('is_deleted', false);
+
+      let totalStorageBytes = 0;
+      allFiles?.forEach(file => {
+        totalStorageBytes += parseInt(file.file_size) || 0;
+      });
+
+      // Count active users (users who have files)
+      const { data: activeUsersData } = await adminClient
+        .from('files')
+        .select('user_id')
+        .eq('is_deleted', false);
+
+      const uniqueUsers = new Set(activeUsersData?.map(file => file.user_id));
+
+      // Calculate average file size
+      const avgFileSize = totalFiles > 0 ? totalStorageBytes / totalFiles : 0;
+
+      // Get file type breakdown
+      const { data: fileTypes } = await adminClient
+        .from('files')
+        .select('mime_type')
+        .eq('is_deleted', false);
+
+      const typeBreakdown = {
+        pdfs: 0,
+        images: 0,
+        documents: 0,
+        other: 0
+      };
+
+      fileTypes?.forEach(file => {
+        const mimeType = file.mime_type?.toLowerCase() || '';
+        if (mimeType === 'application/pdf') {
+          typeBreakdown.pdfs++;
+        } else if (mimeType.startsWith('image/')) {
+          typeBreakdown.images++;
+        } else if (mimeType.includes('document') || mimeType.includes('word') || mimeType.includes('docx')) {
+          typeBreakdown.documents++;
+        } else {
+          typeBreakdown.other++;
+        }
+      });
+
+      // Calculate weekly growth
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const { count: weeklyFiles } = await adminClient
+        .from('files')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      const stats = {
+        totalFiles: totalFiles || 0,
+        storageUsed: formatFileSize(totalStorageBytes),
+        storageUsedBytes: totalStorageBytes,
+        activeUsers: uniqueUsers.size,
+        avgFileSize: formatFileSize(avgFileSize),
+        weeklyGrowth: weeklyFiles || 0,
+        typeBreakdown
+      };
+
+      console.log('📈 File statistics calculated:', stats);
+
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('File stats error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Delete file (soft delete and remove from storage)
+  deleteFile: async (fileId) => {
+    try {
+      const adminClient = getAdminClient();
+      
+      console.log('🗑️ Deleting file:', fileId);
+
+      // First get the file details
+      const { data: file, error: fetchError } = await adminClient
+        .from('files')
+        .select('*')
+        .eq('id', fileId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching file for deletion:', fetchError);
+        throw fetchError;
+      }
+
+      // Soft delete in database
+      const { data, error } = await adminClient
+        .from('files')
+        .update({ 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString() 
+        })
+        .eq('id', fileId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error deleting file in database:', error);
+        throw error;
+      }
+
+      // Optional: Remove from Supabase storage (if using Supabase storage)
+      try {
+        if (file.file_path) {
+          const { error: storageError } = await adminClient.storage
+            .from('files')
+            .remove([file.file_path]);
+          
+          if (storageError) {
+            console.warn('Warning: Could not remove file from storage:', storageError.message);
+            // Don't throw error - soft delete was successful
+          } else {
+            console.log('✅ File removed from storage:', file.file_path);
+          }
+        }
+      } catch (storageError) {
+        console.warn('Warning: Storage deletion failed:', storageError.message);
+        // Continue - database deletion was successful
+      }
+
+      console.log('✅ File deleted successfully:', data?.filename);
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Delete file error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Download file URL
+  getFileDownloadUrl: async (fileId) => {
+    try {
+      const adminClient = getAdminClient();
+      
+      const { data: file, error } = await adminClient
+        .from('files')
+        .select('file_url, filename')
+        .eq('id', fileId)
+        .eq('is_deleted', false)
+        .single();
+
+      if (error) {
+        console.error('Error getting file URL:', error);
+        throw error;
+      }
+
+      return { success: true, data: file };
+    } catch (error) {
+      console.error('Get file URL error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get all proposals with user information and statistics
+  getAllProposals: async (page = 1, limit = 50, search = '', statusFilter = 'all') => {
+    try {
+      const adminClient = getAdminClient();
+      const offset = (page - 1) * limit;
+      
+      console.log('📋 Fetching proposals from database...', { page, limit, search, statusFilter });
+      
+      let query = adminClient
+        .from('proposals')
+        .select(`
+          id, user_id, proposal_number, title, client_name, client_email, 
+          client_company, description, total_amount, currency, status,
+          ai_win_probability, ai_suggested_pricing, ai_market_analysis,
+          ai_risk_factors, ai_recommendations, valid_until, terms_conditions,
+          notes, sent_at, viewed_at, responded_at, created_at, updated_at
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply search filter
+      if (search) {
+        query = query.or(`title.ilike.%${search}%,client_name.ilike.%${search}%,client_company.ilike.%${search}%,proposal_number.ilike.%${search}%`);
+      }
+
+      // Apply status filter
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+
+      const { data: proposals, count, error } = await query;
+
+      if (error) {
+        console.error('Error fetching proposals:', error);
+        throw error;
+      }
+
+      console.log('📋 Found', proposals?.length || 0, 'proposals (total:', count, ')');
+
+      // Get user information for proposals
+      const userIds = [...new Set(proposals?.map(proposal => proposal.user_id).filter(id => id))];
+      const { data: users } = await adminClient
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      const userMap = new Map(users?.map(user => [user.id, user]) || []);
+
+      // Enrich proposals with user data
+      const enrichedProposals = proposals?.map(proposal => ({
+        ...proposal,
+        users: userMap.get(proposal.user_id) || { full_name: 'Unknown', email: 'unknown@example.com' }
+      })) || [];
+
+      return {
+        success: true,
+        data: enrichedProposals,
+        totalCount: count || 0,
+        currentPage: page,
+        totalPages: Math.ceil((count || 0) / limit)
+      };
+    } catch (error) {
+      console.error('Get proposals error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get proposal statistics for dashboard
+  getProposalStats: async () => {
+    try {
+      const adminClient = getAdminClient();
+      
+      console.log('📊 Calculating proposal statistics...');
+
+      // Get total proposals count
+      const { count: totalProposals } = await adminClient
+        .from('proposals')
+        .select('id', { count: 'exact', head: true });
+
+      // Get proposals by status
+      const { data: allProposals } = await adminClient
+        .from('proposals')
+        .select('status, total_amount, created_at');
+
+      let statusBreakdown = {
+        draft: 0,
+        sent: 0,
+        'under review': 0,
+        won: 0,
+        lost: 0,
+        rejected: 0,
+        accepted: 0
+      };
+
+      let totalValue = 0;
+      let wonValue = 0;
+      let wonCount = 0;
+      
+      // Calculate monthly proposals
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      thisMonth.setHours(0, 0, 0, 0);
+      let monthlyProposals = 0;
+
+      allProposals?.forEach(proposal => {
+        const status = (proposal.status || 'draft').toLowerCase();
+        const amount = parseFloat(proposal.total_amount) || 0;
+        const createdAt = new Date(proposal.created_at);
+        
+        // Count by status
+        if (statusBreakdown.hasOwnProperty(status)) {
+          statusBreakdown[status]++;
+        } else {
+          statusBreakdown.draft++; // Default to draft for unknown statuses
+        }
+        
+        totalValue += amount;
+        
+        // Count won proposals
+        if (status === 'won' || status === 'accepted') {
+          wonValue += amount;
+          wonCount++;
+        }
+        
+        // Count monthly proposals
+        if (createdAt >= thisMonth) {
+          monthlyProposals++;
+        }
+      });
+
+      // Calculate win rate
+      const totalSentProposals = statusBreakdown.sent + statusBreakdown['under review'] + statusBreakdown.won + statusBreakdown.lost + statusBreakdown.rejected + statusBreakdown.accepted;
+      const winRate = totalSentProposals > 0 ? Math.round((wonCount / totalSentProposals) * 100) : 0;
+
+      // Count active proposals (sent, under review)
+      const activeProposals = statusBreakdown.sent + statusBreakdown['under review'];
+
+      const stats = {
+        totalProposals: totalProposals || 0,
+        activeProposals,
+        wonThisMonth: wonCount,
+        wonValue: formatCurrency(wonValue),
+        winRate,
+        monthlyProposals,
+        totalValue: formatCurrency(totalValue),
+        statusBreakdown
+      };
+
+      console.log('📈 Proposal statistics calculated:', stats);
+
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('Proposal stats error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Delete proposal (soft delete)
+  deleteProposal: async (proposalId) => {
+    try {
+      const adminClient = getAdminClient();
+      
+      console.log('🗑️ Deleting proposal:', proposalId);
+
+      // For now, we'll do a hard delete since there's no is_deleted column in proposals table
+      // You may want to add is_deleted and deleted_at columns to proposals table for soft delete
+      const { data, error } = await adminClient
+        .from('proposals')
+        .delete()
+        .eq('id', proposalId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error deleting proposal:', error);
+        throw error;
+      }
+
+      console.log('✅ Proposal deleted successfully:', data?.title);
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Delete proposal error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Generate proposal download (PDF or data export)
+  generateProposalDownload: async (proposalId) => {
+    try {
+      const adminClient = getAdminClient();
+      
+      console.log('📄 Generating proposal download:', proposalId);
+
+      const { data: proposal, error } = await adminClient
+        .from('proposals')
+        .select('*')
+        .eq('id', proposalId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching proposal for download:', error);
+        throw error;
+      }
+
+      // Get user information
+      const { data: user } = await adminClient
+        .from('users')
+        .select('full_name, email')
+        .eq('id', proposal.user_id)
+        .single();
+
+      const proposalData = {
+        ...proposal,
+        user_info: user || { full_name: 'Unknown', email: 'unknown@example.com' }
+      };
+
+      console.log('✅ Proposal data prepared for download:', proposalData.title);
+
+      return { success: true, data: proposalData };
+    } catch (error) {
+      console.error('Generate proposal download error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get SIMPLIFIED financial summary - only user names and monthly revenue (FIXED VERSION)
+  getSimpleFinancialSummary: async () => {
+    try {
+      const adminClient = getAdminClient();
+      console.log('💰 Generating simple financial summary (users and monthly revenue only)...');
+      
+      // Get current date for monthly calculations
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // Calculate date range for this month
+      const thisMonthStart = new Date(currentYear, currentMonth, 1);
+      
+      console.log('📅 Date range for this month:', thisMonthStart.toISOString(), 'to', now.toISOString());
+
+      // Get all users
+      const { data: allUsers, error: usersError } = await adminClient
+        .from('users')
+        .select('id, full_name, email')
+        .order('full_name', { ascending: true });
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        return { success: false, error: usersError.message };
+      }
+
+      console.log('👥 Found', allUsers?.length || 0, 'total users');
+      console.log('🔍 Sample user IDs:', allUsers?.slice(0, 3).map(u => ({ id: u.id, name: u.full_name })));
+
+      // Get ALL proposals (not just this month) to debug the issue
+      const { data: allProposals, error: proposalsError } = await adminClient
+        .from('proposals')
+        .select('id, user_id, total_amount, created_at, title')
+        .order('created_at', { ascending: false });
+
+      if (proposalsError) {
+        console.error('Error fetching proposals:', proposalsError);
+        console.warn('⚠️ Continuing with no proposal data due to database error');
+      }
+
+      console.log('💼 Found', allProposals?.length || 0, 'total proposals in database');
+      console.log('🔍 Sample proposal user_ids:', allProposals?.slice(0, 5).map(p => ({ 
+        id: p.id, 
+        user_id: p.user_id, 
+        amount: p.total_amount,
+        title: p.title,
+        created: p.created_at
+      })));
+
+      // Filter proposals for this month
+      const thisMonthProposals = (allProposals || []).filter(proposal => {
+        const proposalDate = new Date(proposal.created_at);
+        return proposalDate >= thisMonthStart && proposalDate <= now;
+      });
+
+      console.log('📅 This month proposals:', thisMonthProposals.length);
+      
+      // If no proposals this month, use all proposals to show total revenue
+      const proposalsToUse = thisMonthProposals.length > 0 ? thisMonthProposals : (allProposals || []);
+      const reportTitle = thisMonthProposals.length > 0 ? 'This Month' : 'All Time';
+      
+      console.log('💰 Using', proposalsToUse.length, 'proposals for revenue calculation (' + reportTitle + ')');
+
+      // Calculate monthly revenue per user
+      const userRevenueMap = new Map();
+      
+      // Initialize all users with zero revenue
+      (allUsers || []).forEach(user => {
+        userRevenueMap.set(user.id, {
+          userId: user.id,
+          userFullName: user.full_name || 'Unknown User',
+          userEmail: user.email,
+          monthlyRevenue: 0
+        });
+      });
+
+      // Debug: Check for user ID matches
+      let matchedProposals = 0;
+      let unmatchedProposals = 0;
+
+      // Track orphaned user IDs that need to be created
+      const orphanedUserIds = new Set();
+      
+      // Add revenue from proposals
+      for (const proposal of proposalsToUse) {
+        console.log('🔍 Processing proposal:', {
+          id: proposal.id,
+          user_id: proposal.user_id,
+          amount: proposal.total_amount,
+          title: proposal.title
+        });
+        
+        let userStats = userRevenueMap.get(proposal.user_id);
+        if (userStats) {
+          const proposalValue = parseFloat(proposal.total_amount) || 0;
+          userStats.monthlyRevenue += proposalValue;
+          matchedProposals++;
+          console.log('✅ Matched proposal to user:', userStats.userFullName, '- Added $' + proposalValue);
+        } else {
+          unmatchedProposals++;
+          console.warn('⚠️ No user found for proposal user_id:', proposal.user_id, '| Proposal:', proposal.title);
+          orphanedUserIds.add(proposal.user_id);
+        }
+      }
+      
+      // Create missing users for orphaned proposals
+      if (orphanedUserIds.size > 0) {
+        console.log('🔧 Creating missing users for', orphanedUserIds.size, 'orphaned proposals...');
+        
+        for (const userId of orphanedUserIds) {
+          try {
+            const result = await adminService.createMissingUser(userId);
+            if (result.success) {
+              // Add the newly created user to our map
+              userRevenueMap.set(userId, {
+                userId: userId,
+                userFullName: result.user.full_name,
+                userEmail: result.user.email,
+                monthlyRevenue: 0
+              });
+              
+              // Now re-process proposals for this user
+              const userProposals = proposalsToUse.filter(p => p.user_id === userId);
+              let userRevenue = 0;
+              userProposals.forEach(proposal => {
+                const proposalValue = parseFloat(proposal.total_amount) || 0;
+                userRevenue += proposalValue;
+              });
+              
+              userRevenueMap.get(userId).monthlyRevenue = userRevenue;
+              console.log('✅ Created user and assigned revenue:', result.user.full_name, '- $' + userRevenue);
+              
+              // Update counters
+              matchedProposals += userProposals.length;
+              unmatchedProposals -= userProposals.length;
+            }
+          } catch (error) {
+            console.error('❌ Failed to create user for ID:', userId, error);
+          }
+        }
+      }
+
+      console.log('📊 Proposal matching results:');
+      console.log('   ✅ Matched proposals:', matchedProposals);
+      console.log('   ⚠️ Unmatched proposals:', unmatchedProposals);
+
+      // Convert to array and sort by revenue (highest first)
+      const financialData = Array.from(userRevenueMap.values())
+        .sort((a, b) => b.monthlyRevenue - a.monthlyRevenue);
+
+      // Calculate summary
+      const totalRevenue = financialData.reduce((sum, user) => sum + user.monthlyRevenue, 0);
+      const usersWithRevenue = financialData.filter(user => user.monthlyRevenue > 0).length;
+
+      console.log('✅ Simple financial summary generated successfully!');
+      console.log('💰 ' + reportTitle + ' Summary:');
+      console.log('   📊 Total Users:', financialData.length);
+      console.log('   💵 Users with Revenue:', usersWithRevenue);
+      console.log('   🗓️ Total Revenue: $' + totalRevenue.toLocaleString());
+      
+      // Show users with revenue
+      const revenueUsers = financialData.filter(u => u.monthlyRevenue > 0);
+      if (revenueUsers.length > 0) {
+        console.log('👥 Users with revenue:');
+        revenueUsers.forEach(user => {
+          console.log(`   💰 ${user.userFullName}: $${user.monthlyRevenue.toLocaleString()}`);
+        });
+      }
+
+      return { 
+        success: true, 
+        data: financialData,
+        summary: {
+          totalUsers: financialData.length,
+          usersWithRevenue: usersWithRevenue,
+          totalMonthlyRevenue: totalRevenue,
+          month: reportTitle === 'This Month' ? now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'All Time Revenue'
+        }
+      };
+    } catch (error) {
+      console.error('Simple financial summary error:', error);
+      return { success: false, error: error.message };
+    }
   }
 };
 
@@ -814,6 +2072,19 @@ const formatFileSize = (bytes) => {
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   
   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+};
+
+const formatCurrency = (amount, currency = 'USD') => {
+  if (!amount) return '$0';
+  
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+  
+  return formattedAmount;
 };
 
 const formatTimeAgo = (dateString) => {
@@ -829,6 +2100,50 @@ const formatTimeAgo = (dateString) => {
   if (diffMins < 60) return `${diffMins} min ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+};
+
+// Calculate user engagement score based on activities
+const calculateEngagementScore = (userStats) => {
+  let score = 0;
+  
+  // Base activity points
+  score += userStats.totalActivities * 10; // 10 points per activity
+  
+  // Bonus points for different activity types (diversified usage)
+  if (userStats.ticketsCreated > 0) score += 25;
+  if (userStats.filesUploaded > 0) score += 25;
+  if (userStats.proposalsCreated > 0) score += 50; // Higher value activity
+  if (userStats.loginSessions > 0) score += 15;
+  
+  // Bonus for active days (consistency)
+  score += userStats.activeDays.size * 5;
+  
+  // Bonus for proposal value (business impact)
+  if (userStats.totalProposalValue > 0) {
+    score += Math.min(Math.floor(userStats.totalProposalValue / 1000) * 2, 100); // Up to 100 bonus points
+  }
+  
+  // Cap the score at 1000
+  return Math.min(score, 1000);
+};
+
+// Categorize activity level based on activities and days
+const categorizeActivityLevel = (totalActivities, activeDays) => {
+  if (totalActivities === 0) return 'Inactive';
+  if (totalActivities <= 5 && activeDays <= 2) return 'Low';
+  if (totalActivities <= 15 && activeDays <= 7) return 'Moderate';
+  if (totalActivities <= 30 && activeDays <= 15) return 'Active';
+  return 'Very Active';
+};
+
+// Categorize revenue performance based on monthly revenue
+const categorizeRevenuePerformance = (monthlyRevenue) => {
+  if (monthlyRevenue === 0) return 'No Revenue';
+  if (monthlyRevenue <= 1000) return 'Low Revenue';
+  if (monthlyRevenue <= 5000) return 'Moderate Revenue';
+  if (monthlyRevenue <= 15000) return 'High Revenue';
+  if (monthlyRevenue <= 50000) return 'Very High Revenue';
+  return 'Top Revenue';
 };
 
 export default adminService;

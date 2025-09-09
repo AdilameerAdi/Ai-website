@@ -39,6 +39,44 @@ export const quoteService = {
       const authenticatedUserId = user.id;
       console.log('Using authenticated user ID:', authenticatedUserId);
       
+      // Ensure user exists in users table before creating proposal
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', authenticatedUserId)
+        .single();
+      
+      if (userCheckError && userCheckError.code === 'PGRST116') {
+        // User doesn't exist, create user record
+        console.log('Creating user record for proposal creation:', authenticatedUserId);
+        
+        const { error: createUserError } = await supabase
+          .from('users')
+          .insert({
+            id: authenticatedUserId,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+            password: 'AUTH_MANAGED',
+            role: 'user',
+            subscription_plan: 'free',
+            subscription_status: 'active',
+            storage_used: 0,
+            storage_limit: 5368709120,
+            is_email_verified: user.email_confirmed_at ? true : false
+          });
+        
+        if (createUserError) {
+          // If user already exists (email conflict), that's fine - continue with proposal creation
+          if (createUserError.code === '23505') {
+            console.log('User already exists, continuing with proposal creation');
+          } else {
+            console.error('Failed to create user record:', createUserError);
+            throw new Error('Failed to create user record: ' + createUserError.message);
+          }
+        }
+        console.log('User record created successfully');
+      }
+      
       const proposalNumber = await quoteService.generateProposalNumber();
       
       // Calculate total from line items

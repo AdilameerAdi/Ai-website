@@ -5,6 +5,7 @@ import ResponsiveLayout, { ResponsiveGrid, ResponsiveCard, ResponsiveButton } fr
 import { QuickSearch } from '../components/SearchComponents';
 import dashboardService from '../services/dashboardService';
 import searchService from '../services/searchService';
+import { authService } from '../services/auth';
 
 export default function UserDashboard({ user, onLogout, navigate }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -87,7 +88,13 @@ export default function UserDashboard({ user, onLogout, navigate }) {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Log logout activity before signing out
+      await authService.logout(user?.id);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     onLogout();
   };
 
@@ -441,7 +448,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
               
               {/* Settings Navigation */}
               <div className="mb-6">
-                <div className="flex flex-wrap gap-2 border-b border-gray-200">
+                <div className="flex overflow-x-auto gap-2 border-b border-gray-200 -mb-px">
                   {[
                     { id: 'profile', label: 'Profile', icon: <FaUser /> },
                     { id: 'notifications', label: 'Notifications', icon: <FaBell /> },
@@ -451,14 +458,14 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                     <button
                       key={tab.id}
                       onClick={() => setActiveSettingsTab(tab.id)}
-                      className={`flex items-center gap-2 px-4 py-2 border-b-2 font-medium text-sm transition ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap transition ${
                         activeSettingsTab === tab.id
                           ? 'border-[#14B8A6] text-[#14B8A6]'
                           : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                       }`}
                     >
-                      {tab.icon}
-                      {tab.label}
+                      <span className="flex-shrink-0">{tab.icon}</span>
+                      <span className="hidden sm:inline">{tab.label}</span>
                     </button>
                   ))}
                 </div>

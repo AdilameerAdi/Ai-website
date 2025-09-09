@@ -187,14 +187,126 @@ export const authService = {
     return authService.hasPermission(user, requiredPermission);
   },
 
-  // Logout user
-  logout: async () => {
+  // Logout user with activity logging
+  logout: async (userId = null) => {
     try {
+      // Log logout activity before signing out
+      if (userId) {
+        try {
+          await authService.logUserActivity(userId, 'logout', 'User logged out');
+        } catch (logError) {
+          console.error('Error logging logout activity:', logError);
+        }
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       return { success: true };
     } catch (error) {
       console.error('Logout error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Log user login activity
+  logUserLogin: async (userId, userEmail) => {
+    try {
+      // Ensure user exists in users table
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (userCheckError && userCheckError.code === 'PGRST116') {
+        // User doesn't exist, create user record
+        console.log('Creating user record during login for:', userId);
+        const { error: createUserError } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: userEmail,
+            full_name: userEmail?.split('@')[0] || 'User',
+            password: 'AUTH_MANAGED',
+            role: 'user',
+            subscription_plan: 'free',
+            subscription_status: 'active',
+            storage_used: 0,
+            storage_limit: 5368709120,
+            is_email_verified: false
+          });
+        
+        if (createUserError) {
+          console.error('Error creating user record during login:', createUserError);
+          return { success: false, error: createUserError.message };
+        }
+        console.log('User record created successfully');
+      } else if (!userCheckError) {
+        // User exists, update last_login
+        await supabase
+          .from('users')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', userId);
+      }
+      
+      // Log the activity
+      await authService.logUserActivity(userId, 'login', `User ${userEmail} logged in`);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error logging login activity:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Generic user activity logger
+  logUserActivity: async (userId, activityType, description) => {
+    try {
+      // First ensure user exists in users table to avoid foreign key constraint violation
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (userCheckError && userCheckError.code === 'PGRST116') {
+        // User doesn't exist, skip logging activity
+        console.warn('User does not exist for activity logging, skipping:', userId);
+        return { success: false, error: 'User does not exist' };
+      } else if (userCheckError) {
+        console.error('Error checking user existence for activity log:', userCheckError);
+        // Still try to log the activity, but warn about the issue
+      }
+      
+      const { error } = await supabase
+        .from('user_activities')
+        .insert({
+          user_id: userId,
+          activity_type: activityType,
+          description: description,
+          timestamp: new Date().toISOString(),
+          ip_address: null, // Would be populated from request in real app
+          user_agent: navigator.userAgent
+        });
+
+      if (error) {
+        // If table doesn't exist, we'll handle gracefully
+        if (error.code === '42P01') {
+          console.log('User activities table does not exist - activity logging disabled');
+          return { success: false, error: 'Activity logging not available' };
+        }
+        
+        // If foreign key constraint violation, log warning but don't fail the operation
+        if (error.code === '23503') {
+          console.warn('Foreign key constraint violation in user_activities, user may not exist:', userId);
+          return { success: false, error: 'User reference error' };
+        }
+        
+        throw error;
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error logging user activity:', error);
       return { success: false, error: error.message };
     }
   },

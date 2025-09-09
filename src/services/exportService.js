@@ -309,6 +309,86 @@ export const exportService = {
           ]);
           break;
 
+        case 'user-activity':
+          headers = [
+            'User ID', 'Full Name', 'Email', 'Role', 'Subscription Plan', 'Account Created',
+            'Last Login', 'Is New User', 'Total Activities', 'Active Days', 'Activity Level',
+            'Engagement Score', 'Tickets Created', 'Files Uploaded', 'Proposals Created',
+            'Login Sessions', 'Total Proposal Value', 'Average Proposal Value',
+            'Storage Used (MB)', 'File Count', 'First Activity', 'Last Activity'
+          ];
+          rows = data.map(user => [
+            user.userId || '',
+            `"${(user.userFullName || '').replace(/"/g, '""')}"`,
+            user.userEmail || '',
+            user.role || '',
+            user.subscriptionPlan || '',
+            user.accountCreated ? new Date(user.accountCreated).toLocaleDateString() : '',
+            user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+            user.isNewUser ? 'Yes' : 'No',
+            user.totalActivities || 0,
+            user.activeDays || 0,
+            user.activityLevel || 'Inactive',
+            user.engagementScore || 0,
+            user.ticketsCreated || 0,
+            user.filesUploaded || 0,
+            user.proposalsCreated || 0,
+            user.loginSessions || 0,
+            user.totalProposalValue ? `$${user.totalProposalValue.toLocaleString()}` : '$0',
+            user.averageProposalValue ? `$${user.averageProposalValue.toLocaleString()}` : '$0',
+            user.totalStorageUsed ? (user.totalStorageUsed / 1024 / 1024).toFixed(2) : '0',
+            user.fileCount || 0,
+            user.firstActivity ? new Date(user.firstActivity).toLocaleDateString() : 'Never',
+            user.lastActivity ? new Date(user.lastActivity).toLocaleDateString() : 'Never'
+          ]);
+          break;
+
+        case 'financial':
+          headers = [
+            'User ID', 'Full Name', 'Email', 'Role', 'Subscription Plan', 'Account Created',
+            'This Month Revenue', 'Last Month Revenue', 'Year to Date Revenue', 'Total Revenue',
+            'This Month Proposals', 'Last Month Proposals', 'YTD Proposals', 'Total Proposals',
+            'Draft Revenue', 'Sent Revenue', 'Accepted Revenue', 'Rejected Revenue',
+            'Average Proposal Value', 'Conversion Rate (%)', 'Monthly Growth (%)',
+            'Revenue Category', 'Top Performer', 'Growing User'
+          ];
+          rows = data.map(user => [
+            user.userId || '',
+            `"${(user.userFullName || '').replace(/"/g, '""')}"`,
+            user.userEmail || '',
+            user.role || '',
+            user.subscriptionPlan || '',
+            user.accountCreated ? new Date(user.accountCreated).toLocaleDateString() : '',
+            user.thisMonthRevenue ? `$${user.thisMonthRevenue.toLocaleString()}` : '$0',
+            user.lastMonthRevenue ? `$${user.lastMonthRevenue.toLocaleString()}` : '$0',
+            user.yearToDateRevenue ? `$${user.yearToDateRevenue.toLocaleString()}` : '$0',
+            user.totalRevenue ? `$${user.totalRevenue.toLocaleString()}` : '$0',
+            user.thisMonthProposals || 0,
+            user.lastMonthProposals || 0,
+            user.yearToDateProposals || 0,
+            user.totalProposals || 0,
+            user.draftRevenue ? `$${user.draftRevenue.toLocaleString()}` : '$0',
+            user.sentRevenue ? `$${user.sentRevenue.toLocaleString()}` : '$0',
+            user.acceptedRevenue ? `$${user.acceptedRevenue.toLocaleString()}` : '$0',
+            user.rejectedRevenue ? `$${user.rejectedRevenue.toLocaleString()}` : '$0',
+            user.averageProposalValue ? `$${user.averageProposalValue.toLocaleString()}` : '$0',
+            user.conversionRate ? user.conversionRate.toFixed(1) + '%' : '0%',
+            user.monthlyGrowth ? user.monthlyGrowth.toFixed(1) + '%' : '0%',
+            user.revenueCategory || 'No Revenue',
+            user.isTopPerformer ? 'Yes' : 'No',
+            user.isGrowing ? 'Yes' : 'No'
+          ]);
+          break;
+
+        case 'simple-financial':
+          headers = ['User Name', 'Email', 'Monthly Revenue'];
+          rows = data.map(user => [
+            `"${(user.userFullName || '').replace(/"/g, '""')}"`,
+            user.userEmail || '',
+            user.monthlyRevenue ? `$${user.monthlyRevenue.toLocaleString()}` : '$0'
+          ]);
+          break;
+
         default:
           headers = Object.keys(data[0] || {});
           rows = data.map(row => 
