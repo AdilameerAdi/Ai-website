@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaArrowLeft, FaDownload, FaArchive, FaCheck, FaReply } from "react-icons/fa";
-import { supabase } from "/Users/kpklaptops/Desktop/Ai-website/src/lib/supabase"; // adjust path
+import { supabase } from "../lib/supabase"; // adjust path
 import jsPDF from "jspdf";
 
 const AdminFeedback= () => {
