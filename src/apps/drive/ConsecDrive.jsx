@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { FaFolder, FaUpload, FaSearch, FaFile, FaImage, FaFilePdf, FaFileWord, FaHome, FaBrain, FaRobot, FaMagic, FaLightbulb, FaTags, FaTrash, FaDownload } from 'react-icons/fa';
 import AppLayout from '../shared/AppLayout';
 import { fileService } from '../../services/fileService';
+import { aiService } from '../../services/aiService';
+import { categorizationService } from '../../services/categorizationService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function ConsecDrive({ user, navigate, onLogout }) {
@@ -127,9 +129,23 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
       // Add folder path to the file data
       uploadResult.data.folderPath = currentFolder;
 
-      // Save file metadata with folder ID
+      // Generate AI analysis for the file
+      const aiAnalysis = await categorizationService.categorizeFile({
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        content: ''
+      });
+
+      // Save file metadata with folder ID and AI analysis
       const metadataResult = await fileService.saveFileMetadata(
-        uploadResult.data, 
+        {
+          ...uploadResult.data,
+          aiCategory: aiAnalysis.category,
+          aiKeywords: aiAnalysis.keywords || [],
+          aiSummary: aiAnalysis.summary || '',
+          aiPriority: aiAnalysis.priority || 'medium'
+        }, 
         user.id, 
         currentFolderId
       );

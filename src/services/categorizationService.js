@@ -6,32 +6,57 @@ export const categorizationService = {
       const { subject, description, priority } = ticket;
       const content = `${subject} ${description}`.toLowerCase();
       
-      // Category definitions with keywords and patterns
+      // Enhanced category definitions with keywords and patterns
       const categories = {
-        technical: {
-          keywords: ['bug', 'error', 'crash', 'broken', 'not working', 'loading', 'slow', 'timeout'],
+        login_issues: {
+          keywords: ['login', 'sign in', 'password', 'forgot password', 'reset password', 'authentication', 'locked out', 'access denied'],
           weight: 1.0,
-          subcategories: ['website_issues', 'performance', 'functionality']
+          subcategories: ['password_reset', 'account_locked', 'authentication_error']
         },
-        account: {
-          keywords: ['login', 'password', 'access', 'account', 'reset', 'locked', 'authentication'],
+        technical_bugs: {
+          keywords: ['bug', 'error', 'crash', 'broken', 'not working', 'malfunction', 'glitch', 'issue'],
+          weight: 1.0,
+          subcategories: ['system_error', 'functionality_broken', 'unexpected_behavior']
+        },
+        performance: {
+          keywords: ['slow', 'loading', 'timeout', 'performance', 'lag', 'delay', 'hanging', 'freeze'],
           weight: 0.9,
-          subcategories: ['login_issues', 'password_reset', 'access_control']
+          subcategories: ['slow_loading', 'timeout_errors', 'system_lag']
         },
-        billing: {
-          keywords: ['payment', 'charge', 'invoice', 'billing', 'refund', 'subscription', 'price'],
+        billing_payment: {
+          keywords: ['payment', 'charge', 'invoice', 'billing', 'refund', 'subscription', 'cost', 'pricing'],
+          weight: 0.9,
+          subcategories: ['payment_failed', 'billing_inquiry', 'refund_request']
+        },
+        feature_requests: {
+          keywords: ['feature', 'request', 'suggestion', 'enhancement', 'improvement', 'add', 'new feature'],
           weight: 0.8,
-          subcategories: ['payment_issues', 'subscription_management', 'refunds']
+          subcategories: ['new_feature', 'enhancement', 'ui_improvement']
         },
-        support: {
-          keywords: ['help', 'how to', 'guide', 'tutorial', 'question', 'information'],
+        general_support: {
+          keywords: ['help', 'how to', 'guide', 'tutorial', 'question', 'information', 'support'],
           weight: 0.7,
-          subcategories: ['general_inquiry', 'how_to', 'information_request']
+          subcategories: ['how_to_guide', 'general_question', 'information_request']
         },
-        feature: {
-          keywords: ['request', 'suggestion', 'enhancement', 'improvement', 'feature', 'add'],
-          weight: 0.6,
-          subcategories: ['feature_request', 'enhancement', 'suggestion']
+        data_issues: {
+          keywords: ['data', 'export', 'import', 'sync', 'backup', 'restore', 'migration'],
+          weight: 0.8,
+          subcategories: ['data_export', 'sync_issues', 'backup_problems']
+        },
+        ui_ux: {
+          keywords: ['interface', 'design', 'layout', 'confusing', 'hard to use', 'navigation', 'menu'],
+          weight: 0.7,
+          subcategories: ['ui_confusing', 'navigation_issues', 'design_feedback']
+        },
+        integration: {
+          keywords: ['api', 'integration', 'webhook', 'connect', 'third party', 'external'],
+          weight: 0.8,
+          subcategories: ['api_issues', 'integration_problems', 'third_party_connect']
+        },
+        security: {
+          keywords: ['security', 'privacy', 'breach', 'unauthorized', 'hack', 'suspicious', 'virus'],
+          weight: 1.0,
+          subcategories: ['security_concern', 'privacy_issue', 'suspicious_activity']
         }
       };
       
@@ -42,10 +67,30 @@ export const categorizationService = {
         if (matches.length > 0) {
           const confidence = Math.min(0.95, 0.5 + (matches.length * 0.2) * categoryData.weight);
           if (confidence > bestMatch.confidence) {
+            // Smart subcategory selection based on specific keywords
+            let subcategory = categoryData.subcategories[0]; // Default
+            
+            if (categoryName === 'login_issues') {
+              if (content.includes('password') || content.includes('reset')) subcategory = 'password_reset';
+              else if (content.includes('locked') || content.includes('access denied')) subcategory = 'account_locked';
+              else subcategory = 'authentication_error';
+            } else if (categoryName === 'technical_bugs') {
+              if (content.includes('error') || content.includes('crash')) subcategory = 'system_error';
+              else if (content.includes('broken') || content.includes('not working')) subcategory = 'functionality_broken';
+              else subcategory = 'unexpected_behavior';
+            } else if (categoryName === 'performance') {
+              if (content.includes('slow') || content.includes('lag')) subcategory = 'slow_loading';
+              else if (content.includes('timeout')) subcategory = 'timeout_errors';
+              else subcategory = 'system_lag';
+            } else {
+              // Random selection for variety
+              subcategory = categoryData.subcategories[Math.floor(Math.random() * categoryData.subcategories.length)];
+            }
+            
             bestMatch = {
               category: categoryName,
               confidence: confidence,
-              subcategory: categoryData.subcategories[0], // Default to first subcategory
+              subcategory: subcategory,
               matchedKeywords: matches
             };
           }

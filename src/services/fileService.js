@@ -52,7 +52,11 @@ export const fileService = {
           mime_type: fileData.fileType,
           folder_id: folderId,
           folder_path: fileData.folderPath || null,
-          upload_status: 'completed'
+          upload_status: 'completed',
+          ai_category: fileData.aiCategory || null,
+          ai_keywords: fileData.aiKeywords || null,
+          ai_summary: fileData.aiSummary || null,
+          ai_priority: fileData.aiPriority || null
         })
         .select()
         .single();

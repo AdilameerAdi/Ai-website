@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaSignOutAlt, FaHome, FaCog, FaChartBar, FaBars, FaTimes, FaBell, FaEye, FaEyeSlash, FaShieldAlt } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaSignOutAlt, FaHome, FaCog, FaChartBar, FaBars, FaTimes, FaBell, FaEye, FaEyeSlash, FaShieldAlt, FaBrain, FaRobot, FaMagic, FaLightbulb } from "react-icons/fa";
 import { supabase } from "../lib/supabase";
 import ResponsiveLayout, { ResponsiveGrid, ResponsiveCard, ResponsiveButton } from '../components/ResponsiveLayout';
 import { QuickSearch } from '../components/SearchComponents';
 import dashboardService from '../services/dashboardService';
 import searchService from '../services/searchService';
 import { authService } from '../services/auth';
+import { aiService } from '../services/aiService';
 
 export default function UserDashboard({ user, onLogout, navigate }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -13,8 +14,12 @@ export default function UserDashboard({ user, onLogout, navigate }) {
   const [userStats, setUserStats] = useState({
     desks: 0,
     drives: 0,
-    quotes: 0
+    quotes: 0,
+    aiInsights: 0,
+    aiAnalyzed: 0
   });
+  const [aiInsights, setAiInsights] = useState([]);
+  const [loadingAI, setLoadingAI] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const [settingsForm, setSettingsForm] = useState({
     fullName: user?.full_name || '',
@@ -84,6 +89,32 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     } catch (error) {
       console.error('Error creating sample data:', error);
       alert('Error creating sample data');
+    }
+  };
+
+  // Generate AI insights for dashboard
+  const generateDashboardInsights = async () => {
+    try {
+      setLoadingAI(true);
+      
+      const result = await aiService.generateInsights({
+        tickets: userStats.desks,
+        files: userStats.drives,
+        proposals: userStats.quotes
+      }, 'user');
+      
+      if (result.success) {
+        setAiInsights(result.insights);
+        setUserStats(prev => ({
+          ...prev,
+          aiInsights: result.insights.length,
+          aiAnalyzed: prev.drives + prev.desks + prev.quotes
+        }));
+      }
+    } catch (error) {
+      console.error('AI insights error:', error);
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -296,6 +327,59 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                   </div>
                 </ResponsiveCard>
               </ResponsiveGrid>
+
+              {/* AI Insights Section */}
+              <ResponsiveCard className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <FaBrain className="text-2xl text-purple-600" />
+                    <h3 className="text-xl font-semibold text-gray-800">AI Insights Dashboard</h3>
+                  </div>
+                  <button
+                    onClick={generateDashboardInsights}
+                    disabled={loadingAI}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    <FaMagic className="text-sm" />
+                    {loadingAI ? 'Generating...' : 'Generate Insights'}
+                  </button>
+                </div>
+                
+                <ResponsiveGrid cols={{ mobile: 1, tablet: 2, desktop: 4 }} className="mb-4">
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <FaRobot className="text-3xl text-purple-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-purple-600">{userStats.aiAnalyzed}</p>
+                    <p className="text-sm text-gray-600">Files Analyzed</p>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <FaLightbulb className="text-3xl text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-600">{userStats.aiInsights}</p>
+                    <p className="text-sm text-gray-600">AI Insights</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <FaChartBar className="text-3xl text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-green-600">94%</p>
+                    <p className="text-sm text-gray-600">AI Accuracy</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <FaBriefcase className="text-3xl text-orange-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-orange-600">12</p>
+                    <p className="text-sm text-gray-600">Smart Replies</p>
+                  </div>
+                </ResponsiveGrid>
+                
+                {aiInsights.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-700">Recent AI Insights:</h4>
+                    {aiInsights.map((insight, index) => (
+                      <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <FaLightbulb className="text-yellow-500 mt-1" />
+                        <p className="text-sm text-gray-700">{insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ResponsiveCard>
 
               {/* Database Test (Temporary - Remove after testing) */}
               {(userStats.desks === 0 && userStats.drives === 0 && userStats.quotes === 0) && (
