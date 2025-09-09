@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import { FaArrowLeft, FaDownload, FaArchive, FaCheck, FaReply } from "react-icons/fa";
 import { supabase } from "/Users/kpklaptops/Desktop/Ai-website/src/lib/supabase"; // adjust path
 import jsPDF from "jspdf";
-import { useNavigate } from "react-router-dom";
 
 const AdminFeedback= () => {
-  const navigate = useNavigate();
 
   // State
   const [feedbackList, setFeedbackList] = useState([]);
@@ -153,7 +151,7 @@ const AdminFeedback= () => {
       {/* Top bar */}
       <div className="flex justify-between items-center mb-6">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => window.history.back()}
           className="flex items-center gap-2 bg-gray-200 px-3 py-2 rounded-lg hover:bg-gray-300"
         >
           <FaArrowLeft /> Back
