@@ -7,6 +7,7 @@ import { ResponsiveButton, ResponsiveModal } from "../components/ResponsiveLayou
 import { ErrorCodes, validateForm } from "../utils/errorHandler";
 import { useToast } from "../components/Toast";
 import { authService } from "../services/auth";
+import { signInWithGoogle } from "../lib/firebase"; 
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -334,16 +335,34 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
           {/* Google OAuth placeholder */}
           <button
-            type="button"
-            onClick={() => alert('Google OAuth integration coming soon!')}
-            className="w-full py-3 sm:py-3.5 px-4 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2 mt-2 text-sm sm:text-base min-h-[44px]"
-          >
-            <img
-              src="https://img.icons8.com/color/16/google-logo.png"
-              alt="Google"
-            />
-            Continue with Google
-          </button>
+  type="button"
+  onClick={async () => {
+    try {
+      const user = await signInWithGoogle();
+      console.log("Google user:", user);
+
+      // Optional: save user to Supabase `users` table if not already there
+      await supabase.from("users").upsert([
+        {
+          full_name: user.displayName,
+          email: user.email,
+        }
+      ]);
+
+      onLoginSuccess(user); // pass back to parent
+    } catch (err) {
+      console.error("Google login error:", err);
+      setError("Google sign-in failed. Try again.");
+    }
+  }}
+  className="w-full py-3 sm:py-3.5 px-4 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2 mt-2 text-sm sm:text-base min-h-[44px]"
+>
+  <img
+    src="https://img.icons8.com/color/16/google-logo.png"
+    alt="Google"
+  />
+  Continue with Google
+</button>
         </form>
 
         {/* Toggle Login/Sign Up */}
