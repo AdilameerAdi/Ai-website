@@ -21,7 +21,7 @@ export default function Hero({ setIsAuthModalOpen }) {
             </h1>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-gray-700 max-w-2xl mx-auto lg:mx-0">
               An AI-driven digital ecosystem for SMEs, powered by{" "}
-              <span className="font-semibold text-[#1C94B5]">ConsecIQ</span>. Manage client
+              <span className="font-semibold text-gray-700 ">ConsecIQ</span>. Manage client
               interactions, secure file storage, and proposals — all in one
               intelligent platform.
             </p>
