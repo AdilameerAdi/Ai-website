@@ -39,66 +39,14 @@ export default function AppLayout({
                 onClick={() => navigate('/dashboard')}
                 className="flex items-center gap-3 hover:opacity-80 transition"
               >
-                <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
               </button>
-              <div className="hidden md:flex items-center gap-1">
-                <span className="text-gray-400">/</span>
-                <div className="flex items-center gap-2 text-gray-600">
-                  {appIcon}
-                  <span className="font-medium">{appName}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* App Navigation */}
-            <div className="hidden lg:flex items-center gap-2">
-              {mainApps.map((app) => (
-                <button
-                  key={app.id}
-                  onClick={() => navigate(app.route)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    window.location.hash.slice(1) === app.route
-                      ? 'bg-[#14B8A6] text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {app.icon}
-                  <span className="hidden xl:inline">{app.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                <FaBell />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-              </button>
-
-              {/* User Menu */}
-              <div className="flex items-center gap-3">
-                <div className="hidden md:block text-right">
-                  <div className="text-sm font-medium text-gray-700">
-                    {user?.full_name || user?.email}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {user?.email}
-                  </div>
-                </div>
-                <button
-                  onClick={onLogout}
-                  className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition text-sm"
-                >
-                  <FaSignOutAlt />
-                  <span className="hidden sm:inline">Logout</span>
-                </button>
-              </div>
+              
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)] relative">
+      <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div 
@@ -110,22 +58,33 @@ export default function AppLayout({
         {/* Sidebar */}
         <aside className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed lg:relative lg:translate-x-0 w-64 sm:w-72 lg:w-64 bg-white shadow-md border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out lg:transition-none h-full mobile-scroll`}>
+        } fixed lg:relative lg:translate-x-0 w-72 sm:w-80 md:w-64 lg:w-64 xl:w-72 bg-white shadow-md border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out lg:transition-none h-full overflow-y-auto`}>
+          
+          {/* Close button for mobile */}
+          <div className="lg:hidden flex justify-end p-4">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              <FaTimes />
+            </button>
+          </div>
+
           {/* App Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="px-4 pb-4 lg:p-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#14B8A6] text-white rounded-lg">
+              <div className="p-2 bg-[#14B8A6] text-white rounded-lg flex-shrink-0">
                 {appIcon}
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-800">{appName}</h3>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-800 truncate">{appName}</h3>
                 <p className="text-xs text-gray-500">Management Suite</p>
               </div>
             </div>
           </div>
 
           {/* Menu Items */}
-          <nav className="p-3 sm:p-4 space-y-1 sm:space-y-2">
+          <nav className="p-3 sm:p-4 space-y-1 sm:space-y-2 pb-20 lg:pb-4">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -133,14 +92,14 @@ export default function AppLayout({
                   setActiveTab(item.id);
                   setSidebarOpen(false); // Close mobile sidebar on selection
                 }}
-                className={`w-full flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition touch-friendly ${
+                className={`w-full flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3 rounded-lg transition-all duration-200 min-h-[44px] ${
                   activeTab === item.id
-                    ? "bg-[#14B8A6] text-white"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-[#14B8A6] text-white shadow-md"
+                    : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
                 }`}
               >
-                <span className="text-base sm:text-lg flex-shrink-0">{item.icon}</span>
-                <span className="font-medium text-sm sm:text-base">{item.label}</span>
+                <span className="text-lg flex-shrink-0">{item.icon}</span>
+                <span className="font-medium text-sm sm:text-base truncate">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -148,26 +107,28 @@ export default function AppLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 xl:p-8 overflow-auto mobile-scroll">
-          {children}
+        <main className="flex-1 w-full min-w-0 p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden">
+          <div className="w-full max-w-none">
+            {children}
+          </div>
         </main>
       </div>
 
       {/* Mobile App Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 safe-area-inset-bottom shadow-lg">
         <div className="flex">
           {mainApps.map((app) => (
             <button
               key={app.id}
               onClick={() => navigate(app.route)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 sm:py-3 text-xs touch-friendly ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[60px] transition-all duration-200 ${
                 window.location.hash.slice(1) === app.route
-                  ? 'text-[#14B8A6]'
-                  : 'text-gray-600'
+                  ? 'text-[#14B8A6] bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <span className="text-lg">{app.icon}</span>
-              <span className="text-xs truncate">{app.name.replace('Consec', '')}</span>
+              <span className="text-lg sm:text-xl">{app.icon}</span>
+              <span className="text-xs font-medium truncate leading-tight">{app.name.replace('Consec', '')}</span>
             </button>
           ))}
         </div>

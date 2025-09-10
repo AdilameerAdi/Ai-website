@@ -1069,7 +1069,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
             
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
               <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -1265,29 +1265,29 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] divide-y divide-gray-200">
+                <div className="overflow-x-auto mobile-table-container">
+                  <table className="w-full min-w-[500px] sm:min-w-[640px] divide-y divide-gray-200 mobile-table">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Title</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Priority</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Status & Actions</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Created</th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">AI</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16">ID</th>
+                        <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] sm:min-w-[200px]">Title</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20">Priority</th>
+                        <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] sm:min-w-[140px]">Status & Actions</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hide-mobile">Created</th>
+                        <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14 sm:w-20">AI</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {tickets.map((ticket) => (
                         <tr key={ticket.id} className="hover:bg-gray-50">
-                          <td className="px-3 py-3 text-xs font-medium text-gray-900">#{ticket.id}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 sm:px-3 py-3 text-xs font-medium text-gray-900">#{ticket.id}</td>
+                          <td className="px-3 sm:px-4 py-3">
                             <div>
-                              <div className="text-sm text-gray-900 font-medium line-clamp-1">{ticket.title}</div>
-                              <div className="text-xs text-gray-500 line-clamp-1 mt-1 max-w-xs">{ticket.description}</div>
+                              <div className="text-xs sm:text-sm text-gray-900 font-medium line-clamp-1">{ticket.title}</div>
+                              <div className="text-xs text-gray-500 line-clamp-1 mt-1 max-w-[100px] sm:max-w-xs">{ticket.description}</div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               ticket.priority === 'high' || ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
                               ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
@@ -1296,9 +1296,9 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                               {ticket.priority?.charAt(0).toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-2">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                          <td className="px-3 sm:px-4 py-3">
+                            <div className="flex flex-col gap-1 sm:gap-2">
+                              <span className={`inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium w-fit ${
                                 ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
                                 ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
                                 ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
@@ -1327,10 +1327,10 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
+                          <td className="px-2 sm:px-3 py-3 text-xs text-gray-500 whitespace-nowrap hide-mobile">
                             {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-2 sm:px-3 py-3 text-center">
                             {ticket.ai_category && (
                               <FaBrain className="text-blue-500 text-sm" title={`AI Category: ${ticket.ai_category}`} />
                             )}
@@ -1845,8 +1845,8 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
 
       {/* Ticket Creation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 mobile-modal">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mobile-modal-content">
             <div className="sticky top-0 bg-white flex items-center justify-between p-4 sm:p-6 border-b rounded-t-xl">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Create New Ticket</h3>
               <button

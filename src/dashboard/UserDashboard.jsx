@@ -332,11 +332,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition touch-friendly">
-                <FaBell className="text-lg" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-              </button>
+              
 
               {/* User Menu */}
               <div className="flex items-center gap-3">

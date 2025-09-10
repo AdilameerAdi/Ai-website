@@ -454,6 +454,109 @@
   touch-action: manipulation;
 }
 
+/* Mobile-specific fixes for app layout */
+@media (max-width: 1024px) {
+  /* Ensure sidebar doesn't interfere with content on mobile */
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh !important;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .app-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  /* Content area adjustments for mobile */
+  .app-content {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding-bottom: 80px; /* Account for bottom navigation */
+  }
+}
+
+/* Mobile content padding adjustments */
+@media (max-width: 768px) {
+  .mobile-content-padding {
+    padding: 0.75rem !important;
+  }
+  
+  .mobile-reduced-padding {
+    padding: 0.5rem !important;
+  }
+  
+  /* Ensure modals work properly on mobile */
+  .mobile-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  .mobile-modal-content {
+    width: 100%;
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .extra-small-padding {
+    padding: 0.25rem !important;
+  }
+  
+  .extra-small-gap {
+    gap: 0.25rem !important;
+  }
+  
+  /* Compact button styling for very small screens */
+  .compact-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+}
+
+/* Fix for horizontal overflow issues */
+.prevent-horizontal-overflow {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Ensure tables are responsive */
+@media (max-width: 640px) {
+  .mobile-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .mobile-table {
+    min-width: 100%;
+    width: max-content;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 0.5rem 0.375rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+}
+
 /* Better mobile form styling */
 @media (max-width: 768px) {
   .mobile-form-group {

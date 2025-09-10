@@ -3,96 +3,89 @@
 ## Environment Setup
 
 ### Required Environment Variables
-Create a `.env` file (not committed to Git) with the following variables:
+
+Before deploying, you need to set up the following environment variables:
 
 ```bash
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 NODE_ENV=production
 ```
 
-### Supabase Database Setup
-Before deploying, ensure your Supabase database has the required tables:
+### Local Development
 
-1. **Run Database Schema**: Execute the SQL files in your Supabase SQL editor:
-   - `database-schema.sql` (main tables)
-   - `consecquote-setup.sql` (proposals tables)
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
 
-2. **Required Tables**:
-   - `proposals` (ConsecQuote) ✅ 
-   - `support_tickets` (ConsecDesk) ⚠️ 
-   - `files` (ConsecDrive) ⚠️
+2. Update the `.env` file with your actual Supabase credentials
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-3. **Row Level Security (RLS)**:
-   - All tables have RLS enabled
-   - Policies allow users to access only their own data
+### Deployment Platforms
+
+#### Vercel
+1. Connect your GitHub repository to Vercel
+2. In the Vercel dashboard, go to Project Settings → Environment Variables
+3. Add the required environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `NODE_ENV=production`
+
+#### Netlify
+1. Connect your GitHub repository to Netlify
+2. In the Netlify dashboard, go to Site settings → Build & deploy → Environment variables
+3. Add the required environment variables
+
+#### Other Platforms
+For other deployment platforms, ensure you set the environment variables in their respective configuration sections.
 
 ## Build Process
 
-### Local Build Test
-```bash
-npm install
-npm run build
-npm run preview
-```
+The application is configured to:
+- ✅ Build successfully without environment variables (with warnings)
+- ✅ Handle missing Supabase configuration gracefully
+- ✅ Show appropriate error messages when authentication is unavailable
+- ✅ Prevent crashes when login/signup forms are submitted without Supabase
+- ✅ Display helpful error messages for missing configuration
 
-### Production Build
-```bash
-npm run build
-```
-This creates a `dist/` folder ready for deployment.
+## Pre-deployment Checklist
 
-## Deployment Platforms
+- [ ] Environment variables configured on deployment platform
+- [ ] Build passes: `npm run build`
+- [ ] No critical console errors
+- [ ] Mobile responsiveness tested
+- [ ] Authentication flow tested (if Supabase is configured)
 
-### Vercel (Recommended)
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
+## Supabase Setup
 
-### Netlify
-1. Connect GitHub repository
-2. Set build command: `npm run build`
-3. Set publish directory: `dist`
-4. Add environment variables
+If you need to set up a new Supabase project:
 
-### Other Platforms
-- Build command: `npm run build`
-- Output directory: `dist`
-- Node version: 18+
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Get your project URL and anon key from Project Settings → API
+3. Set up your database tables as needed
+4. Configure Row Level Security (RLS) policies
+5. Update your environment variables
 
-## Known Issues
+## Common Issues
 
-### Linting Warnings
-- 119 unused variable warnings (non-blocking)
-- These don't affect functionality or deployment
+### 403 Forbidden Errors
+- Check that your Supabase anon key is correct
+- Verify your Supabase URL is correct
+- Ensure RLS policies are configured properly
 
-### Bundle Size Warnings
-- Some chunks are larger than 500KB
-- Consider code splitting for better performance
-- Non-blocking for deployment
+### Build Failures
+- Run `npm run build` locally first
+- Check for missing dependencies
+- Verify environment variables are set correctly
 
-### Database Tables
-- `support_tickets` and `files` tables need to be created
-- Dashboard will show 0 counts until tables exist
-- Proposals functionality works correctly
+## Support
 
-## Security Notes
-
-### Environment Variables
-- ✅ Supabase credentials now use environment variables
-- ✅ `.env` files are in `.gitignore`
-- ✅ `.env.example` provided for reference
-
-### Database Security
-- ✅ Row Level Security (RLS) enabled
-- ✅ User authentication required
-- ✅ Users can only access their own data
-
-## Post-Deployment Checklist
-
-1. ✅ Application loads without errors
-2. ✅ User authentication works (login/signup)
-3. ✅ ConsecQuote functionality (create, edit, delete proposals)
-4. ⚠️ Dashboard statistics (requires database tables)
-5. ⚠️ ConsecDesk functionality (requires support_tickets table)
-6. ⚠️ ConsecDrive functionality (requires files table)
+For deployment issues, check:
+1. Browser console for errors
+2. Network tab for failed requests
+3. Environment variables configuration
+4. Supabase project settings and policies
