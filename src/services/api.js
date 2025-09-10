@@ -392,6 +392,23 @@ export const apiService = {
       console.error('Error optimizing pricing:', error);
       return { success: false, error: error.message };
     }
+  },
+
+  // Generate line items based on AI analysis of user prompt
+  generateLineItems: async (prompt, userId) => {
+    try {
+      // In production, this would call an AI service like OpenAI or Claude
+      // For now, we'll simulate AI-powered generation based on the prompt
+      
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
+      
+      const lineItems = generateLineItemsFromPrompt(prompt);
+      
+      return { success: true, data: lineItems };
+    } catch (error) {
+      console.error('Error generating line items:', error);
+      return { success: false, error: error.message };
+    }
   }
 };
 
@@ -478,4 +495,113 @@ function generatePricingReasoning(item, clientProfile, complexity) {
     'Complexity analysis recommends premium pricing for specialized work'
   ];
   return reasons[Math.floor(Math.random() * reasons.length)];
+}
+
+// Generate line items based on user prompt using AI-like logic
+function generateLineItemsFromPrompt(prompt) {
+  const lowerPrompt = prompt.toLowerCase();
+  const items = [];
+  
+  // Detect common project types and generate appropriate items
+  if (lowerPrompt.includes('website') || lowerPrompt.includes('web')) {
+    items.push(
+      { name: 'UI/UX Design & Wireframing', description: 'Complete user interface design and wireframe creation', quantity: 1, unitPrice: 2500, total: 2500 },
+      { name: 'Frontend Development', description: 'Responsive frontend development with modern frameworks', quantity: 1, unitPrice: 4000, total: 4000 },
+      { name: 'Backend Development', description: 'Server-side development and API integration', quantity: 1, unitPrice: 3500, total: 3500 },
+      { name: 'Database Design & Setup', description: 'Database architecture and initial setup', quantity: 1, unitPrice: 1500, total: 1500 }
+    );
+    
+    if (lowerPrompt.includes('ecommerce') || lowerPrompt.includes('e-commerce') || lowerPrompt.includes('shop')) {
+      items.push(
+        { name: 'Payment Gateway Integration', description: 'Integration with multiple payment processors', quantity: 1, unitPrice: 1200, total: 1200 },
+        { name: 'Product Catalog Management', description: 'Advanced product management system', quantity: 1, unitPrice: 2000, total: 2000 },
+        { name: 'Shopping Cart & Checkout', description: 'Complete shopping cart and checkout flow', quantity: 1, unitPrice: 1800, total: 1800 }
+      );
+    }
+    
+    if (lowerPrompt.includes('admin') || lowerPrompt.includes('dashboard')) {
+      items.push(
+        { name: 'Admin Dashboard', description: 'Comprehensive admin panel with analytics', quantity: 1, unitPrice: 2800, total: 2800 }
+      );
+    }
+    
+    if (lowerPrompt.includes('mobile') || lowerPrompt.includes('responsive')) {
+      items.push(
+        { name: 'Mobile Optimization', description: 'Mobile-first responsive design implementation', quantity: 1, unitPrice: 1500, total: 1500 }
+      );
+    }
+    
+    if (lowerPrompt.includes('seo')) {
+      items.push(
+        { name: 'SEO Optimization', description: 'On-page SEO and performance optimization', quantity: 1, unitPrice: 800, total: 800 }
+      );
+    }
+  }
+  
+  if (lowerPrompt.includes('app') || lowerPrompt.includes('mobile')) {
+    items.push(
+      { name: 'Mobile App Design', description: 'Native mobile app UI/UX design', quantity: 1, unitPrice: 3000, total: 3000 },
+      { name: 'iOS Development', description: 'Native iOS app development', quantity: 1, unitPrice: 5000, total: 5000 },
+      { name: 'Android Development', description: 'Native Android app development', quantity: 1, unitPrice: 4800, total: 4800 },
+      { name: 'App Store Submission', description: 'App store optimization and submission', quantity: 1, unitPrice: 500, total: 500 }
+    );
+  }
+  
+  if (lowerPrompt.includes('auth') || lowerPrompt.includes('login') || lowerPrompt.includes('user')) {
+    if (!items.some(item => item.name.includes('Authentication'))) {
+      items.push(
+        { name: 'User Authentication System', description: 'Complete user registration and login system', quantity: 1, unitPrice: 1200, total: 1200 }
+      );
+    }
+  }
+  
+  if (lowerPrompt.includes('maintenance')) {
+    const months = lowerPrompt.includes('3 month') ? 3 : lowerPrompt.includes('6 month') ? 6 : 12;
+    const monthlyRate = 400;
+    items.push(
+      { name: `${months}-Month Maintenance`, description: 'Bug fixes, updates, and technical support', quantity: months, unitPrice: monthlyRate, total: months * monthlyRate }
+    );
+  }
+  
+  if (lowerPrompt.includes('testing') || lowerPrompt.includes('qa')) {
+    items.push(
+      { name: 'Quality Assurance Testing', description: 'Comprehensive testing and bug fixes', quantity: 1, unitPrice: 1000, total: 1000 }
+    );
+  }
+  
+  if (lowerPrompt.includes('hosting') || lowerPrompt.includes('deploy')) {
+    items.push(
+      { name: 'Deployment & Hosting Setup', description: 'Server setup, deployment, and initial hosting', quantity: 1, unitPrice: 600, total: 600 }
+    );
+  }
+
+  if (lowerPrompt.includes('api') || lowerPrompt.includes('integration')) {
+    items.push(
+      { name: 'API Development & Integration', description: 'Custom API development and third-party integrations', quantity: 1, unitPrice: 2200, total: 2200 }
+    );
+  }
+
+  if (lowerPrompt.includes('security') || lowerPrompt.includes('ssl')) {
+    items.push(
+      { name: 'Security Implementation', description: 'SSL certificates, security headers, and protection measures', quantity: 1, unitPrice: 800, total: 800 }
+    );
+  }
+
+  if (lowerPrompt.includes('analytics') || lowerPrompt.includes('tracking')) {
+    items.push(
+      { name: 'Analytics & Tracking Setup', description: 'Google Analytics, conversion tracking, and reporting', quantity: 1, unitPrice: 600, total: 600 }
+    );
+  }
+  
+  // If no specific items matched, add generic development items
+  if (items.length === 0) {
+    items.push(
+      { name: 'Project Planning & Analysis', description: 'Requirements analysis and project planning', quantity: 1, unitPrice: 800, total: 800 },
+      { name: 'Core Development', description: 'Main development work based on requirements', quantity: 1, unitPrice: 5000, total: 5000 },
+      { name: 'Testing & Quality Assurance', description: 'Comprehensive testing and bug fixes', quantity: 1, unitPrice: 1000, total: 1000 },
+      { name: 'Documentation & Training', description: 'User documentation and training materials', quantity: 1, unitPrice: 500, total: 500 }
+    );
+  }
+  
+  return items;
 }

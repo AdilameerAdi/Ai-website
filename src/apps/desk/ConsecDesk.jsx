@@ -20,6 +20,8 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [applyingResponse, setApplyingResponse] = useState(null);
+  const [generatingAI, setGeneratingAI] = useState({});
+  const [aiResponses, setAiResponses] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [feedbackData, setFeedbackData] = useState({
@@ -279,6 +281,61 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
     };
   };
 
+  // Handle ticket status change
+  const changeTicketStatus = async (ticketId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      // Update local state
+      setTickets(prev => prev.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, status: newStatus, updated_at: new Date().toISOString() }
+          : ticket
+      ));
+      
+      // Create notification for status change
+      const statusMessages = {
+        'in_progress': 'moved to In Progress',
+        'resolved': 'marked as Complete'
+      };
+      
+      await createNotification({
+        title: 'Ticket Status Updated',
+        message: `Ticket #${ticketId} has been ${statusMessages[newStatus]}`,
+        type: 'success',
+        category: 'ticket',
+        relatedId: ticketId,
+        relatedType: 'ticket'
+      });
+      
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      alert('Failed to update ticket status. Please try again.');
+    }
+  };
+
+  // Get available status options for a ticket
+  const getAvailableStatusOptions = (currentStatus) => {
+    switch (currentStatus) {
+      case 'open':
+        return [{ value: 'in_progress', label: 'Move to In Progress', color: 'yellow' }];
+      case 'in_progress':
+        return [{ value: 'resolved', label: 'Mark as Complete', color: 'green' }];
+      case 'resolved':
+        return []; // No further progression
+      default:
+        return [];
+    }
+  };
+
   // Get recent activity from tickets and notifications
   const getRecentActivity = () => {
     const activities = [];
@@ -394,6 +451,67 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
     } catch (error) {
       console.error('Error with AI training:', error);
       alert('AI training action failed. Please try again.');
+    }
+  };
+
+  // Generate AI response for a specific ticket
+  const generateAIResponse = async (ticket) => {
+    setGeneratingAI(prev => ({ ...prev, [ticket.id]: true }));
+    
+    try {
+      // Call the AI service with ticket title and description
+      const result = await aiService.generateTicketResponse(ticket.title, ticket.description);
+      
+      if (result.success) {
+        // Store the AI response
+        setAiResponses(prev => ({ ...prev, [ticket.id]: result.response }));
+        
+        // Update the ticket's AI suggested response in local state
+        setTickets(prev => prev.map(t => 
+          t.id === ticket.id 
+            ? { 
+                ...t, 
+                ai_suggested_response: result.response,
+                ai_category: result.category,
+                ai_sentiment: result.sentiment,
+                ai_confidence: result.confidence
+              }
+            : t
+        ));
+
+        // Optionally save to database
+        try {
+          await supabase
+            .from('tickets')
+            .update({
+              ai_suggested_response: result.response,
+              ai_category: result.category,
+              ai_sentiment: result.sentiment,
+              ai_confidence: result.confidence,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', ticket.id);
+        } catch (dbError) {
+          console.warn('Could not save AI response to database:', dbError);
+        }
+        
+        // Create notification about AI analysis
+        await createNotification({
+          title: 'AI Analysis Complete',
+          message: `AI has generated a response for ticket #${ticket.id} - "${ticket.title}"`,
+          type: 'success',
+          category: 'ai',
+          relatedId: ticket.id,
+          relatedType: 'ticket'
+        });
+      } else {
+        alert('Failed to generate AI response: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      alert('Failed to generate AI response. Please try again.');
+    } finally {
+      setGeneratingAI(prev => ({ ...prev, [ticket.id]: false }));
     }
   };
 
@@ -936,73 +1054,73 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
+      case 'dashboard': {
         const dashboardMetrics = calculateDashboardMetrics();
         const recentActivity = getRecentActivity();
         
         return (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">ConsecDesk Dashboard</h2>
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="pb-20 lg:pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">ConsecDesk Dashboard</h2>
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg w-fit">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-blue-600 text-sm font-medium">Live Data</span>
               </div>
             </div>
             
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
-              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Open Tickets</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.openTickets}</p>
-                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Active support tickets</p>
+                    <p className="text-2xl font-bold text-[#14B8A6] mt-1">{dashboardMetrics.openTickets}</p>
+                    <p className="text-xs text-gray-400 mt-1">Active support tickets</p>
                   </div>
-                  <FaTicketAlt className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
+                  <FaTicketAlt className="text-2xl text-[#14B8A6] opacity-20 flex-shrink-0" />
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">In Progress</p>
-                    <p className="text-3xl font-bold text-[#14B8A6] mt-2">{dashboardMetrics.inProgressTickets}</p>
+                    <p className="text-2xl font-bold text-[#14B8A6] mt-1">{dashboardMetrics.inProgressTickets}</p>
                     <p className="text-xs text-gray-400 mt-1">Being worked on</p>
                   </div>
-                  <FaTicketAlt className="text-4xl text-[#14B8A6] opacity-20" />
+                  <FaTicketAlt className="text-2xl text-[#14B8A6] opacity-20 flex-shrink-0" />
                 </div>
               </div>
               
-              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Resolved Today</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.resolvedToday}</p>
-                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Last 24 hours</p>
+                    <p className="text-2xl font-bold text-[#14B8A6] mt-1">{dashboardMetrics.resolvedToday}</p>
+                    <p className="text-xs text-gray-400 mt-1">Last 24 hours</p>
                   </div>
-                  <FaTicketAlt className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
+                  <FaTicketAlt className="text-2xl text-[#14B8A6] opacity-20 flex-shrink-0" />
                 </div>
               </div>
               
-              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-500 text-sm">Client Satisfaction</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-[#14B8A6] mt-2 truncate">{dashboardMetrics.clientSatisfaction}★</p>
-                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">Average rating</p>
+                    <p className="text-2xl font-bold text-[#14B8A6] mt-1">{dashboardMetrics.clientSatisfaction}★</p>
+                    <p className="text-xs text-gray-400 mt-1">Average rating</p>
                   </div>
-                  <FaStar className="text-3xl sm:text-4xl text-[#14B8A6] opacity-20 ml-2" />
+                  <FaStar className="text-2xl text-[#14B8A6] opacity-20 flex-shrink-0" />
                 </div>
               </div>
             </div>
 
             {/* ConsecIQ AI Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 sm:mb-8">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl border border-blue-200">
                 <div className="flex items-center gap-3 mb-4">
-                  <FaBrain className="text-2xl text-blue-600" />
-                  <h3 className="text-xl font-semibold text-gray-800">ConsecIQ Smart Analysis</h3>
+                  <FaBrain className="text-xl sm:text-2xl text-blue-600 flex-shrink-0" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800">ConsecIQ Smart Analysis</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-white rounded-lg">
@@ -1027,10 +1145,10 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-6 rounded-xl border border-green-200">
+              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-4 sm:p-6 rounded-xl border border-green-200">
                 <div className="flex items-center gap-3 mb-4">
-                  <FaRobot className="text-2xl text-green-600" />
-                  <h3 className="text-xl font-semibold text-gray-800">AI Recommendations</h3>
+                  <FaRobot className="text-xl sm:text-2xl text-green-600 flex-shrink-0" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800">AI Recommendations</h3>
                 </div>
                 <div className="space-y-3">
                   <div className="p-3 bg-white rounded-lg">
@@ -1062,9 +1180,9 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-gray-800">Recent Activity</h3>
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Recent Activity</h3>
                 <span className="text-xs text-gray-500">Live updates</span>
               </div>
               
@@ -1094,34 +1212,35 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
           </div>
         );
+      }
 
       case 'tickets':
         return (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">Support Tickets</h2>
+          <div className="pb-20 lg:pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Support Tickets</h2>
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition w-fit"
               >
-                <FaPlus />
-                New Ticket
+                <FaPlus className="text-sm" />
+                <span className="text-sm">New Ticket</span>
               </button>
             </div>
 
             {/* Filters */}
-            <div className="flex gap-4 mb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg">
-                <FaSearch className="text-gray-400" />
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+              <div className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg flex-1 sm:flex-none">
+                <FaSearch className="text-gray-400 flex-shrink-0" />
                 <input 
                   type="text" 
                   placeholder="Search tickets..."
-                  className="outline-none"
+                  className="outline-none flex-1 min-w-0"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 transition">
+              <button className="flex items-center justify-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 transition">
                 <FaFilter className="text-gray-400" />
-                Filter
+                <span>Filter</span>
               </button>
             </div>
 
@@ -1146,66 +1265,74 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto shadow-sm border border-gray-200 rounded-lg">
-                  <table className="w-full min-w-full divide-y divide-gray-200">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Title</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Priority</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Created</th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">AI Analysis</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Title</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Priority</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Status & Actions</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Created</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">AI</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {tickets.map((ticket) => (
-                        <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer">
-                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">#{ticket.id}</td>
-                          <td className="px-3 sm:px-6 py-3 sm:py-4">
+                        <tr key={ticket.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-3 text-xs font-medium text-gray-900">#{ticket.id}</td>
+                          <td className="px-4 py-3">
                             <div>
-                              <div className="text-xs sm:text-sm text-gray-900 font-medium truncate">{ticket.title}</div>
-                              <div className="text-xs text-gray-500 truncate max-w-xs sm:block hidden">{ticket.description}</div>
-                              <div className="text-xs text-gray-500 sm:hidden">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2 ${
-                                  ticket.priority === 'high' || ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                                  ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-green-100 text-green-800'
-                                }`}>
-                                  {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
-                                </span>
-                              </div>
+                              <div className="text-sm text-gray-900 font-medium line-clamp-1">{ticket.title}</div>
+                              <div className="text-xs text-gray-500 line-clamp-1 mt-1 max-w-xs">{ticket.description}</div>
                             </div>
                           </td>
-                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               ticket.priority === 'high' || ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
                               ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-green-100 text-green-800'
                             }`}>
-                              {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                              {ticket.priority?.charAt(0).toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
-                              ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                              ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              <span className="hidden sm:inline">{ticket.status?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
-                              <span className="sm:hidden">{ticket.status?.charAt(0).toUpperCase()}</span>
-                            </span>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {ticket.status === 'in_progress' ? 'In Progress' : 
+                                 ticket.status === 'resolved' ? 'Complete' : 'Open'}
+                              </span>
+                              {getAvailableStatusOptions(ticket.status).length > 0 && (
+                                <div className="flex gap-1">
+                                  {getAvailableStatusOptions(ticket.status).map((option) => (
+                                    <button
+                                      key={option.value}
+                                      onClick={() => changeTicketStatus(ticket.id, option.value)}
+                                      className={`px-2 py-1 text-xs rounded-md transition hover:opacity-80 ${
+                                        option.color === 'yellow' ? 'bg-yellow-500 text-white' :
+                                        option.color === 'green' ? 'bg-green-500 text-white' :
+                                        'bg-gray-500 text-white'
+                                      }`}
+                                      title={option.label}
+                                    >
+                                      {option.value === 'in_progress' ? '▶' : '✓'}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
-                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
-                            {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : ticket.created}
+                          <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
+                            {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                           </td>
-                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden lg:table-cell">
+                          <td className="px-3 py-3 text-center">
                             {ticket.ai_category && (
-                              <div className="flex items-center gap-1">
-                                <FaBrain className="text-blue-500" />
-                                <span className="text-xs text-blue-600 capitalize">{ticket.ai_category}</span>
-                              </div>
+                              <FaBrain className="text-blue-500 text-sm" title={`AI Category: ${ticket.ai_category}`} />
                             )}
                           </td>
                         </tr>
@@ -1218,25 +1345,25 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
           </div>
         );
 
-      case 'ai-insights':
+      case 'ai-insights': {
         const sentimentData = calculateSentimentAnalytics();
         const autoResolutionData = calculateAutoResolutionMetrics();
         const smartSuggestionsData = calculateSmartSuggestions();
         const aiPerformanceData = calculateAIPerformance();
         
         return (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">ConsecIQ AI Insights</h2>
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <FaBrain className="text-blue-600" />
-                <span className="text-blue-600 font-semibold">AI Powered • {tickets.length} tickets analyzed</span>
+          <div className="pb-20 lg:pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">ConsecIQ AI Insights</h2>
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg w-fit">
+                <FaBrain className="text-blue-600 flex-shrink-0" />
+                <span className="text-blue-600 font-semibold text-sm">AI Powered • {tickets.length} analyzed</span>
               </div>
             </div>
 
             {/* AI Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl border border-purple-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 sm:p-6 rounded-xl border border-purple-200">
                 <div className="flex items-center gap-3 mb-4">
                   <FaBrain className="text-2xl text-purple-600" />
                   <h3 className="text-lg font-semibold text-gray-800">Sentiment Analysis</h3>
@@ -1257,7 +1384,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-6 rounded-xl border border-green-200">
+              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-4 sm:p-6 rounded-xl border border-green-200">
                 <div className="flex items-center gap-3 mb-4">
                   <FaRobot className="text-2xl text-green-600" />
                   <h3 className="text-lg font-semibold text-gray-800">Auto-Resolution</h3>
@@ -1278,7 +1405,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-xl border border-orange-200">
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-4 sm:p-6 rounded-xl border border-orange-200">
                 <div className="flex items-center gap-3 mb-4">
                   <FaLightbulb className="text-2xl text-orange-600" />
                   <h3 className="text-lg font-semibold text-gray-800">Smart Suggestions</h3>
@@ -1301,7 +1428,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
 
             {/* Smart Ticket Analysis */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 sm:mb-8">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Smart Ticket Analysis</h3>
               <div className="space-y-4">
                 {tickets.map((ticket) => (
@@ -1342,9 +1469,33 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                       <div className="bg-green-50 p-3 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
                           <FaRobot className="text-green-600" />
-                          <span className="font-semibold text-gray-800">Suggested Response</span>
+                          <span className="font-semibold text-gray-800">AI Suggested Response</span>
+                          {!aiResponses[ticket.id] && (
+                            <button
+                              onClick={() => generateAIResponse(ticket)}
+                              disabled={generatingAI[ticket.id]}
+                              className="ml-auto px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              {generatingAI[ticket.id] ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Generating...</span>
+                                </div>
+                              ) : 'Generate AI Response'}
+                            </button>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-600">{ticket.ai_suggested_response || 'AI response will be generated automatically'}</p>
+                        {aiResponses[ticket.id] ? (
+                          <div className="text-sm text-gray-700 whitespace-pre-line">
+                            {aiResponses[ticket.id]}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-600 italic">
+                            {generatingAI[ticket.id] 
+                              ? 'AI is analyzing the ticket content and generating a personalized response...' 
+                              : 'Click "Generate AI Response" to get a personalized response based on the ticket content'}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
@@ -1369,9 +1520,9 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
 
             {/* AI Training & Feedback */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">AI Performance</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">AI Performance</h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-700">Accuracy Rate</span>
@@ -1388,8 +1539,8 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">AI Training Center</h3>
+              <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">AI Training Center</h3>
                 <div className="space-y-3">
                   <button 
                     onClick={() => handleAITraining('retrain')}
@@ -1434,13 +1585,14 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
           </div>
         );
+      }
 
       case 'notifications':
         return (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">Notifications</h2>
-              <div className="flex items-center gap-4">
+          <div className="pb-20 lg:pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Notifications</h2>
+              <div className="flex items-center gap-3 sm:gap-4">
                 <span className="text-sm text-gray-500">
                   {notifications.filter(n => !n.read).length} unread
                 </span>
@@ -1465,22 +1617,22 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 <p className="text-sm mt-2">New notifications will appear here</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {notifications.map((notification) => (
-                  <div key={notification.id} className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                  <div key={notification.id} className={`p-3 sm:p-4 rounded-lg border transition-all hover:shadow-md ${
                     notification.read ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-200 shadow-sm'
                   }`}>
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className={`w-3 h-3 mt-2 rounded-full flex-shrink-0 ${
+                      <div className="flex items-start gap-2 sm:gap-3 flex-1">
+                        <div className={`w-2 h-2 sm:w-3 sm:h-3 mt-2 rounded-full flex-shrink-0 ${
                           notification.read ? 'bg-gray-400' : 'bg-blue-500'
                         }`}></div>
                         <div className="flex-1 min-w-0">
                           {notification.title && (
-                            <h4 className="font-semibold text-gray-800 mb-1">{notification.title}</h4>
+                            <h4 className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">{notification.title}</h4>
                           )}
                           <p className="text-gray-700 text-sm break-words">{notification.message}</p>
-                          <div className="flex items-center gap-4 mt-2">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
                             <p className="text-gray-500 text-xs">{notification.time}</p>
                             {notification.category && (
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -1504,7 +1656,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4 flex-shrink-0">
                         {notification.actionUrl && (
                           <button 
                             onClick={() => {
@@ -1518,7 +1670,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                                 markNotificationAsRead(notification.id);
                               }
                             }}
-                            className="px-3 py-1 text-xs bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition"
+                            className="px-2 sm:px-3 py-1 text-xs bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition"
                           >
                             View
                           </button>
@@ -1526,9 +1678,10 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                         {!notification.read && (
                           <button 
                             onClick={() => markNotificationAsRead(notification.id)}
-                            className="px-3 py-1 text-xs text-blue-600 hover:bg-blue-100 rounded-lg transition"
+                            className="px-2 sm:px-3 py-1 text-xs text-blue-600 hover:bg-blue-100 rounded-lg transition"
                           >
-                            Mark read
+                            <span className="hidden sm:inline">Mark read</span>
+                            <span className="sm:hidden">✓</span>
                           </button>
                         )}
                       </div>
@@ -1542,17 +1695,17 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
 
       case 'feedback':
         return (
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Send Feedback</h2>
+          <div className="pb-20 lg:pb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">Send Feedback</h2>
             
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
               <form onSubmit={submitFeedback} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                   <select 
                     value={feedbackData.category}
                     onChange={(e) => setFeedbackData({...feedbackData, category: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none text-sm"
                     required
                   >
                     <option value="bug_report">Bug Report</option>
@@ -1568,7 +1721,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   <select 
                     value={feedbackData.priority}
                     onChange={(e) => setFeedbackData({...feedbackData, priority: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none text-sm"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1583,7 +1736,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                     type="text"
                     value={feedbackData.subject}
                     onChange={(e) => setFeedbackData({...feedbackData, subject: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none text-sm"
                     placeholder="Brief description of your feedback"
                     required
                   />
@@ -1594,8 +1747,8 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   <textarea
                     value={feedbackData.message}
                     onChange={(e) => setFeedbackData({...feedbackData, message: e.target.value})}
-                    rows={6}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
+                    rows={4}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none text-sm resize-none"
                     placeholder="Detailed feedback or description..."
                     required
                   ></textarea>
@@ -1627,11 +1780,11 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={submittingFeedback}
-                    className="flex-1 px-6 py-3 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full sm:flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     {submittingFeedback ? (
                       <>
@@ -1654,7 +1807,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                       priority: 'medium',
                       rating: 0
                     })}
-                    className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    className="w-full sm:w-auto px-4 py-2 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm sm:text-base"
                   >
                     Clear
                   </button>
@@ -1668,7 +1821,6 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
           </div>
         );
-
 
       default:
         return <div>Page not found</div>;
@@ -1694,18 +1846,54 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
       {/* Ticket Creation Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-xl font-semibold text-gray-800">Create New Ticket</h3>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white flex items-center justify-between p-4 sm:p-6 border-b rounded-t-xl">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Create New Ticket</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition"
+                className="text-gray-400 hover:text-gray-600 transition p-1"
               >
-                <FaTimes />
+                <FaTimes className="text-lg" />
               </button>
             </div>
             
-            <form onSubmit={createTicket} className="p-6">
+            <form onSubmit={createTicket} className="p-4 sm:p-6">
+              {/* AI Tips Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <FaBrain className="text-blue-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-blue-800 mb-2">💡 Tips for Better AI Responses</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• <strong>Be specific:</strong> Include exact error messages, steps you tried, or technical details</li>
+                      <li>• <strong>Mention context:</strong> Add keywords like "university website", "mobile app", "database error"</li>
+                      <li>• <strong>State your goal:</strong> "I need help creating...", "I want to fix...", "I'm looking for..."</li>
+                      <li>• <strong>Include relevant info:</strong> Operating system, browser, software versions when applicable</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Website Issue Keywords */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <FaEnvelope className="text-red-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-red-800 mb-2">📞 Need Immediate Contact Info?</h4>
+                    <p className="text-sm text-red-700 mb-2">Use these exact keywords to get our direct contact information:</p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"website not working"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"site down"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"login not working"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"cannot login"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"website error"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"site broken"</span>
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"authentication error"</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1715,10 +1903,13 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none"
-                    placeholder="Brief description of the issue"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none text-sm"
+                    placeholder="e.g. 'Web development help for university portal' or 'Login error on website'"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Good: "React app crashes on mobile" | Avoid: "Help me"
+                  </p>
                 </div>
                 
                 <div>
@@ -1729,13 +1920,28 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows="4"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none"
-                    placeholder="Detailed description of the issue..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none text-sm resize-none"
+                    placeholder="Example: I need help creating a responsive website for my university. It should have a student portal, course catalog, and faculty directory. I'm considering React or Vue.js for the frontend. What other technologies would you recommend for the backend and database?"
                     required
                   />
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex-1">
+                      <div className={`h-1 rounded ${formData.description.length < 50 ? 'bg-red-300' : formData.description.length < 100 ? 'bg-yellow-300' : 'bg-green-300'}`}>
+                        <div 
+                          className={`h-1 rounded transition-all ${formData.description.length < 50 ? 'bg-red-500' : formData.description.length < 100 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                          style={{ width: `${Math.min((formData.description.length / 150) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <span className={`text-xs ${formData.description.length < 50 ? 'text-red-500' : formData.description.length < 100 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {formData.description.length < 50 ? 'Add more details for better AI response' : 
+                       formData.description.length < 100 ? 'Good detail level' : 
+                       'Excellent detail for AI analysis'}
+                    </span>
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Priority
@@ -1743,7 +1949,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                     <select
                       value={formData.priority}
                       onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none text-sm"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -1759,7 +1965,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent outline-none text-sm"
                     >
                       <option value="general">General</option>
                       <option value="technical">Technical</option>
@@ -1771,37 +1977,37 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
                 </div>
               </div>
               
-              <div className="flex gap-3 pt-6">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 px-4 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   {submitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Creating...
+                      <span>Creating...</span>
                     </>
                   ) : (
                     <>
-                      <FaSave />
-                      Create Ticket
+                      <FaSave className="text-sm" />
+                      <span>Create Ticket</span>
                     </>
                   )}
                 </button>
               </div>
             </form>
             
-            <div className="px-6 pb-4">
-              <div className="flex items-center gap-2 text-xs text-gray-500 bg-blue-50 p-2 rounded-lg">
-                <FaBrain className="text-blue-500" />
+            <div className="px-4 sm:px-6 pb-4">
+              <div className="flex items-center gap-2 text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                <FaBrain className="text-blue-500 flex-shrink-0" />
                 <span>AI will automatically analyze and categorize your ticket</span>
               </div>
             </div>

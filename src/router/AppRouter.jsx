@@ -10,11 +10,8 @@ import TermsOfService from '../pages/TermsOfService';
 import Documentation from '../pages/Documentation';
 import Security from '../pages/Security';
 
-// User Dashboard & Apps
+// User Dashboard (All apps integrated)
 import UserDashboard from '../dashboard/UserDashboard';
-import ConsecDesk from '../apps/desk/ConsecDesk';
-import ConsecDrive from '../apps/drive/ConsecDrive';
-import ConsecQuote from '../apps/quote/ConsecQuote';
 
 // Admin Panel
 import AdminDashboard from '../admin/AdminDashboard';
@@ -27,7 +24,7 @@ import AdminFeedback from '../admin/AdminFeedback';
 
 export default function AppRouter() {
   const [currentRoute, setCurrentRoute] = useState('/');
-  const { user, loading, isAuthenticated, login, logout, hasPermission, canAccessResource } = useAuth();
+  const { user, loading, isAuthenticated, login, logout, canAccessResource } = useAuth();
 
   // Initialize router
   useEffect(() => {
@@ -126,15 +123,12 @@ export default function AppRouter() {
       case '/security':
         return <Security navigate={navigate} />;
 
-      // User Dashboard & Apps  
+      // User Dashboard (All functionality integrated)
       case '/dashboard':
-        return <UserDashboard {...commonProps} />;
       case '/desk':
-        return <ConsecDesk {...commonProps} />;
       case '/drive':
-        return <ConsecDrive {...commonProps} />;
       case '/quote':
-        return <ConsecQuote {...commonProps} />;
+        return <UserDashboard {...commonProps} />;
 
       // Admin Panel Routes
       case '/admin':

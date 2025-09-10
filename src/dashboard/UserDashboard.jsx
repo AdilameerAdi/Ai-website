@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
-import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaSignOutAlt, FaHome, FaCog, FaChartBar, FaBars, FaTimes, FaBell, FaEye, FaEyeSlash, FaShieldAlt, FaBrain, FaRobot, FaMagic, FaLightbulb } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaHome, FaCog, FaChartBar, FaBell, FaEye, FaEyeSlash, FaShieldAlt, FaBrain, FaRobot, FaMagic, FaLightbulb, FaChevronDown, FaChevronUp, FaTicketAlt, FaComment, FaUpload, FaEdit, FaPlus, FaBars, FaTimes, FaSignOutAlt } from "react-icons/fa";
 import { supabase } from "../lib/supabase";
-import ResponsiveLayout, { ResponsiveGrid, ResponsiveCard, ResponsiveButton } from '../components/ResponsiveLayout';
+import { ResponsiveGrid, ResponsiveCard, ResponsiveButton } from '../components/ResponsiveLayout';
 import { QuickSearch } from '../components/SearchComponents';
 import dashboardService from '../services/dashboardService';
 import searchService from '../services/searchService';
 import { authService } from '../services/auth';
 import { aiService } from '../services/aiService';
+
+// Import the actual app components
+import ConsecDesk from '../apps/desk/ConsecDesk';
+import ConsecDrive from '../apps/drive/ConsecDrive';
+import ConsecQuote from '../apps/quote/ConsecQuote';
 
 export default function UserDashboard({ user, onLogout, navigate }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -48,6 +53,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     analytics: localStorage.getItem('privacy_analytics') !== 'false'
   });
   const [activeSettingsTab, setActiveSettingsTab] = useState('profile');
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   // Load dashboard stats when component mounts
   useEffect(() => {
@@ -203,41 +209,153 @@ export default function UserDashboard({ user, onLogout, navigate }) {
 
   const menuItems = [
     { id: "overview", label: "Overview", icon: <FaHome /> },
-    { id: "desk", label: "ConsecDesk", icon: <FaBriefcase /> },
-    { id: "drive", label: "ConsecDrive", icon: <FaFolder /> },
-    { id: "quote", label: "ConsecQuote", icon: <FaFileAlt /> },
+    { 
+      id: "desk", 
+      label: "ConsecDesk", 
+      icon: <FaBriefcase />, 
+      hasDropdown: true,
+      dropdownItems: [
+        { id: "support-tickets", label: "Support Tickets", icon: <FaTicketAlt /> }
+      ]
+    },
+    { 
+      id: "drive", 
+      label: "ConsecDrive", 
+      icon: <FaFolder />, 
+      hasDropdown: true,
+      dropdownItems: [
+        { id: "upload-files", label: "Upload Files", icon: <FaUpload /> }
+      ]
+    },
+    { 
+      id: "quote", 
+      label: "ConsecQuote", 
+      icon: <FaFileAlt />, 
+      hasDropdown: true,
+      dropdownItems: [
+        { id: "create-quote", label: "Create Quote", icon: <FaPlus /> }
+      ]
+    },
     { id: "analytics", label: "Analytics", icon: <FaChartBar /> },
     { id: "settings", label: "Settings", icon: <FaCog /> }
   ];
+
+  const handleDropdownToggle = (itemId) => {
+    if (openDropdown === itemId) {
+      setOpenDropdown(null);
+    } else {
+      setOpenDropdown(itemId);
+    }
+  };
+
+  const handleDropdownItemClick = (parentId, itemId) => {
+    console.log(`Clicked ${parentId} -> ${itemId}`);
+    // Handle specific dropdown item actions here
+    switch(parentId) {
+      case 'desk':
+        handleDeskAction(itemId);
+        break;
+      case 'drive':
+        handleDriveAction(itemId);
+        break;
+      case 'quote':
+        handleQuoteAction(itemId);
+        break;
+    }
+    setOpenDropdown(null);
+    setSidebarOpen(false);
+  };
+
+  const handleDeskAction = (actionId) => {
+    switch(actionId) {
+      case 'support-tickets':
+        // Show full ConsecDesk app within UserDashboard
+        setActiveTab('desk-full');
+        break;
+      case 'consec-iq':
+        // Show ConsecIQ insights within dashboard
+        setActiveTab('desk-insights');
+        break;
+      case 'notifications':
+        // Show notifications within dashboard
+        setActiveTab('desk-notifications');
+        break;
+      case 'feedback':
+        // Show feedback form within dashboard
+        setActiveTab('desk-feedback');
+        break;
+    }
+  };
+
+  const handleDriveAction = (actionId) => {
+    switch(actionId) {
+      case 'upload-files':
+      case 'my-files':
+      case 'shared-files':
+      case 'recent-files':
+        // Show full ConsecDrive app within UserDashboard
+        setActiveTab('drive-full');
+        break;
+    }
+  };
+
+  const handleQuoteAction = (actionId) => {
+    switch(actionId) {
+      case 'create-quote':
+      case 'my-quotes':
+      case 'templates':
+      case 'analytics-quotes':
+        // Show full ConsecQuote app within UserDashboard
+        setActiveTab('quote-full');
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="responsive-container">
-          <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+                className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition touch-friendly"
               >
-                {sidebarOpen ? <FaTimes /> : <FaBars />}
+                {sidebarOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
               </button>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
-              <span className="hidden sm:inline text-gray-500">Dashboard</span>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
+                <span className="hidden sm:inline text-gray-400">/</span>
+                <span className="hidden sm:inline text-gray-600 font-medium">Dashboard</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <span className="hidden sm:inline text-gray-700 text-sm lg:text-base">Welcome, {user?.full_name || user?.email}</span>
-              <span className="sm:hidden text-gray-700 text-sm">Hi, {user?.full_name?.split(' ')[0] || user?.email.split('@')[0]}</span>
-              <ResponsiveButton
-                onClick={handleLogout}
-                variant="outline"
-                size="small"
-                className="flex items-center gap-2 hover:bg-gray-50"
-              >
-                <FaSignOutAlt className="text-red-500" />
-                <span className="hidden sm:inline text-gray-700">Logout</span>
-              </ResponsiveButton>
+
+            <div className="flex items-center gap-4">
+              {/* Notifications */}
+              <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition touch-friendly">
+                <FaBell className="text-lg" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+              </button>
+
+              {/* User Menu */}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:block text-right">
+                  <div className="text-sm font-medium text-gray-700">
+                    {user?.user_metadata?.full_name || user?.email}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {user?.email}
+                  </div>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition text-sm touch-friendly"
+                >
+                  <FaSignOutAlt />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -252,21 +370,49 @@ export default function UserDashboard({ user, onLogout, navigate }) {
         `}>
           <nav className="p-4 space-y-2 h-full overflow-y-auto">
             {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                  activeTab === item.id
-                    ? "bg-[#14B8A6] text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </button>
+              <div key={item.id}>
+                {/* Main Menu Item */}
+                <button
+                  onClick={() => {
+                    if (item.hasDropdown) {
+                      handleDropdownToggle(item.id);
+                    } else {
+                      setActiveTab(item.id);
+                      setSidebarOpen(false);
+                      setOpenDropdown(null);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                    activeTab === item.id
+                      ? "bg-[#14B8A6] text-white"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span className="font-medium flex-1 text-left">{item.label}</span>
+                  {item.hasDropdown && (
+                    <span className="text-sm">
+                      {openDropdown === item.id ? <FaChevronUp /> : <FaChevronDown />}
+                    </span>
+                  )}
+                </button>
+
+                {/* Dropdown Items */}
+                {item.hasDropdown && openDropdown === item.id && (
+                  <div className="ml-4 mt-2 space-y-1 border-l-2 border-gray-200 pl-4">
+                    {item.dropdownItems.map((dropdownItem) => (
+                      <button
+                        key={dropdownItem.id}
+                        onClick={() => handleDropdownItemClick(item.id, dropdownItem.id)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition text-sm"
+                      >
+                        <span className="text-base">{dropdownItem.icon}</span>
+                        <span className="font-medium">{dropdownItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </aside>
@@ -280,8 +426,8 @@ export default function UserDashboard({ user, onLogout, navigate }) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-auto mobile-scroll">
+          <div className="p-3 sm:p-4 lg:p-6 xl:p-8 pb-20 md:pb-4">
           {/* Overview Tab */}
           {activeTab === "overview" && (
             <div>
@@ -451,54 +597,88 @@ export default function UserDashboard({ user, onLogout, navigate }) {
             </div>
           )}
 
-          {/* ConsecDesk Tab */}
-          {activeTab === "desk" && (
+          {/* ConsecDesk Dropdown Views */}
+          {activeTab === "desk-insights" && (
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">ConsecDesk</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">ConsecIQ Insights</h2>
               <ResponsiveCard padding="large">
                 <div className="text-center py-8 sm:py-12">
-                  <FaBriefcase className="text-4xl sm:text-6xl text-gray-300 mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Client Management System</h3>
-                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Manage client tickets, track conversations, and provide support.</p>
-                  <ResponsiveButton onClick={() => navigate('/desk')}>
-                    Create New Ticket
+                  <FaBrain className="text-4xl sm:text-6xl text-purple-300 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">AI-Powered Insights</h3>
+                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">View intelligent insights and analytics for your support desk.</p>
+                  <ResponsiveButton onClick={generateDashboardInsights} disabled={loadingAI}>
+                    {loadingAI ? 'Generating...' : 'Generate AI Insights'}
                   </ResponsiveButton>
                 </div>
               </ResponsiveCard>
             </div>
           )}
 
-          {/* ConsecDrive Tab */}
-          {activeTab === "drive" && (
+          {activeTab === "desk-notifications" && (
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">ConsecDrive</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Notifications</h2>
               <ResponsiveCard padding="large">
                 <div className="text-center py-8 sm:py-12">
-                  <FaFolder className="text-4xl sm:text-6xl text-gray-300 mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Cloud Storage</h3>
-                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Store, organize, and share your files securely in the cloud.</p>
-                  <ResponsiveButton onClick={() => navigate('/drive')}>
-                    Upload Files
-                  </ResponsiveButton>
+                  <FaBell className="text-4xl sm:text-6xl text-blue-300 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Notification Center</h3>
+                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">View and manage your notifications and alerts.</p>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 rounded-lg text-left">
+                      <p className="text-sm text-gray-700">No new notifications</p>
+                    </div>
+                  </div>
                 </div>
               </ResponsiveCard>
             </div>
           )}
 
-          {/* ConsecQuote Tab */}
-          {activeTab === "quote" && (
+          {activeTab === "desk-feedback" && (
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">ConsecQuote</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Feedback</h2>
               <ResponsiveCard padding="large">
                 <div className="text-center py-8 sm:py-12">
-                  <FaFileAlt className="text-4xl sm:text-6xl text-gray-300 mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Quote Generation</h3>
-                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Create professional quotes and proposals for your clients.</p>
-                  <ResponsiveButton onClick={() => navigate('/quote')}>
-                    Generate Quote
-                  </ResponsiveButton>
+                  <FaComment className="text-4xl sm:text-6xl text-green-300 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">Send Feedback</h3>
+                  <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Share your feedback and suggestions with us.</p>
+                  <div className="max-w-md mx-auto">
+                    <textarea 
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      rows="4"
+                      placeholder="Your feedback..."
+                    ></textarea>
+                    <ResponsiveButton className="mt-3">
+                      Send Feedback
+                    </ResponsiveButton>
+                  </div>
                 </div>
               </ResponsiveCard>
+            </div>
+          )}
+
+          {/* Full ConsecDesk App */}
+          {activeTab === "desk-full" && (
+            <div className="w-full -m-4 sm:-m-6 lg:-m-8">
+              <div className="overflow-hidden">
+                <ConsecDesk user={user} navigate={navigate} onLogout={onLogout} />
+              </div>
+            </div>
+          )}
+
+          {/* Full ConsecDrive App */}
+          {activeTab === "drive-full" && (
+            <div className="w-full -m-4 sm:-m-6 lg:-m-8">
+              <div className="overflow-hidden">
+                <ConsecDrive user={user} navigate={navigate} onLogout={onLogout} />
+              </div>
+            </div>
+          )}
+
+          {/* Full ConsecQuote App */}
+          {activeTab === "quote-full" && (
+            <div className="w-full -m-4 sm:-m-6 lg:-m-8">
+              <div className="overflow-hidden">
+                <ConsecQuote user={user} navigate={navigate} onLogout={onLogout} />
+              </div>
             </div>
           )}
 
@@ -848,6 +1028,63 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           )}
           </div>
         </main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
+        <div className="flex">
+          <button
+            onClick={() => {
+              setActiveTab('overview');
+              setSidebarOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
+              activeTab === 'overview' ? 'text-[#14B8A6]' : 'text-gray-600'
+            }`}
+          >
+            <FaHome className="text-lg" />
+            <span>Home</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveTab('desk-full');
+              setSidebarOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
+              activeTab.includes('desk') ? 'text-[#14B8A6]' : 'text-gray-600'
+            }`}
+          >
+            <FaBriefcase className="text-lg" />
+            <span>Desk</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveTab('drive-full');
+              setSidebarOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
+              activeTab.includes('drive') ? 'text-[#14B8A6]' : 'text-gray-600'
+            }`}
+          >
+            <FaFolder className="text-lg" />
+            <span>Drive</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveTab('quote-full');
+              setSidebarOpen(false);
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
+              activeTab.includes('quote') ? 'text-[#14B8A6]' : 'text-gray-600'
+            }`}
+          >
+            <FaFileAlt className="text-lg" />
+            <span>Quote</span>
+          </button>
+        </div>
       </div>
     </div>
   );

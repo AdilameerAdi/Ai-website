@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaFileAlt, FaPlus, FaEdit, FaEye, FaDownload, FaChartBar, FaHome, FaSearch, FaBrain, FaLightbulb, FaRocket, FaExclamationTriangle, FaFilePdf, FaFileCsv, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaFileAlt, FaPlus, FaEdit, FaEye, FaDownload, FaChartBar, FaHome, FaSearch, FaBrain, FaLightbulb, FaRocket, FaFilePdf, FaFileCsv, FaTrash, FaTimes } from 'react-icons/fa';
 import AppLayout from '../shared/AppLayout';
 import { apiService } from '../../services/api.js';
 import { exportService } from '../../services/exportService.js';
@@ -23,17 +23,27 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     currency: 'USD',
     validUntil: '',
     termsConditions: '',
-    notes: ''
+    notes: '',
+    taxPercentage: 0
   });
   const [lineItems, setLineItems] = useState([
     { name: '', description: '', quantity: 1, unitPrice: 0 }
   ]);
   const [editingProposal, setEditingProposal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  
-  
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatingItems, setGeneratingItems] = useState(false);
   
   const [selectedProposal, setSelectedProposal] = useState(null);
+
+  // Calculate total amount including tax for a proposal
+  const calculateTotalWithTax = (proposal) => {
+    const subtotal = proposal.total_amount || 0;
+    const taxPercentage = proposal.tax_percentage || 0;
+    const tax = (subtotal * taxPercentage) / 100;
+    return subtotal + tax;
+  };
 
   // Generate consistent AI data based on proposal characteristics
   const getConsistentAIData = (proposal) => {
@@ -208,6 +218,38 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     alert('Pricing optimization complete for all proposals!');
   };
 
+  // Generate line items using AI
+  const generateLineItemsWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      alert('Please describe what you need line items for');
+      return;
+    }
+    
+    setGeneratingItems(true);
+    
+    try {
+      // Use the API service to generate line items with AI
+      const response = await apiService.generateLineItems(aiPrompt, user.id);
+      
+      if (response.success && response.data && response.data.length > 0) {
+        // Replace existing line items with AI-generated ones
+        setLineItems(response.data);
+        setShowAIGenerator(false);
+        setAiPrompt('');
+        alert(`Successfully generated ${response.data.length} line items with AI!`);
+      } else {
+        // Fallback: Show error message
+        alert('AI service is currently not available. Please try again later or add line items manually.');
+      }
+    } catch (error) {
+      console.error('AI generation failed:', error);
+      alert('Failed to generate line items. Please try again later or add line items manually.');
+    } finally {
+      setGeneratingItems(false);
+    }
+  };
+
+
   // Load proposals from database
   const loadProposals = async () => {
     try {
@@ -266,10 +308,6 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     setLineItems(updatedItems);
   };
 
-  // Add new line item
-  const addLineItem = () => {
-    setLineItems([...lineItems, { name: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]);
-  };
 
   // Remove line item
   const removeLineItem = (index) => {
@@ -290,7 +328,8 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       const proposalData = {
         ...formData,
         lineItems,
-        status
+        status,
+        taxPercentage: parseFloat(formData.taxPercentage) || 0
       };
 
       const result = await quoteService.createProposal(proposalData, user.id);
@@ -324,7 +363,8 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       currency: 'USD',
       validUntil: '',
       termsConditions: '',
-      notes: ''
+      notes: '',
+      taxPercentage: 0
     });
     setLineItems([{ name: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]);
     setEditingProposal(null);
@@ -342,7 +382,8 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       currency: proposal.currency || 'USD',
       validUntil: proposal.valid_until ? proposal.valid_until.split('T')[0] : '',
       termsConditions: proposal.terms_conditions || '',
-      notes: proposal.notes || ''
+      notes: proposal.notes || '',
+      taxPercentage: proposal.tax_percentage || 0
     });
     
     // Set line items from database
@@ -457,7 +498,6 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     { id: 'dashboard', label: 'Dashboard', icon: <FaHome /> },
     { id: 'create', label: 'Create Quote', icon: <FaPlus /> },
     { id: 'proposals', label: 'All Proposals', icon: <FaFileAlt /> },
-    { id: 'ai-insights', label: 'AI Insights', icon: <FaBrain /> },
     { id: 'analytics', label: 'Analytics', icon: <FaChartBar /> }
   ];
 
@@ -570,7 +610,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                     +${Math.floor(proposals.reduce((sum, p) => {
                       const suggestedPrice = p.ai_suggested_price || aiAnalysis[p.id]?.suggestedPricing || getConsistentAIData(p).suggestedPricing;
                       return sum + suggestedPrice;
-                    }, 0) - proposals.reduce((sum, p) => sum + (p.total_amount || 10000), 0)).toLocaleString()} potential increase
+                    }, 0) - proposals.reduce((sum, p) => sum + calculateTotalWithTax(p), 0)).toLocaleString()} potential increase
                   </p>
                 </div>
               </div>
@@ -581,12 +621,6 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                   <h3 className="text-lg font-semibold text-gray-800">Quick Actions</h3>
                 </div>
                 <div className="space-y-2">
-                  <button 
-                    onClick={() => setActiveTab('ai-insights')}
-                    className="w-full text-left px-3 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition text-sm"
-                  >
-                    View AI Analysis
-                  </button>
                   <button 
                     onClick={() => generateAIAnalysisForAll()}
                     disabled={loadingAI}
@@ -724,14 +758,24 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <label className="text-sm font-medium text-gray-700">Line Items</label>
-                    <button 
-                      type="button"
-                      onClick={addLineItem}
-                      className="flex items-center gap-2 px-3 py-2 text-[#14B8A6] border border-[#14B8A6] rounded-lg hover:bg-[#14B8A6] hover:text-white transition"
-                    >
-                      <FaPlus />
-                      Add Item
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setLineItems([...lineItems, { name: '', description: '', quantity: 1, unitPrice: 0, total: 0 }])}
+                        className="flex items-center gap-2 px-3 py-2 text-[#14B8A6] border border-[#14B8A6] rounded-lg hover:bg-[#14B8A6] hover:text-white transition"
+                      >
+                        <FaPlus />
+                        Add Item
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setShowAIGenerator(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-md"
+                      >
+                        <FaBrain />
+                        Generate with AI
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -798,13 +842,6 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                         ))}
                       </tbody>
                     </table>
-                    <div className="p-4 bg-gray-50 border-t">
-                      <div className="flex justify-between items-center">
-                        <div className="text-lg font-semibold text-gray-800">
-                          Total: ${lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0).toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
@@ -857,6 +894,52 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
                     placeholder="Internal notes (not visible to client)..."
                   ></textarea>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tax (%)</label>
+                  <input
+                    type="number"
+                    name="taxPercentage"
+                    value={formData.taxPercentage}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:outline-none"
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                  />
+                </div>
+
+                {/* Total Summary */}
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Total Summary</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="text-lg font-medium text-gray-800">
+                        ${lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Tax ({formData.taxPercentage}%):</span>
+                      <span className="text-lg font-medium text-gray-800">
+                        ${((lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0) * (parseFloat(formData.taxPercentage) || 0)) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold text-gray-800">Total Amount:</span>
+                        <span className="text-2xl font-bold text-[#14B8A6]">
+                          ${(() => {
+                            const subtotal = lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0);
+                            const tax = (subtotal * (parseFloat(formData.taxPercentage) || 0)) / 100;
+                            return (subtotal + tax).toFixed(2);
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -1016,7 +1099,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                       proposals.map((proposal) => {
                         const displayTitle = proposal.title || (proposal.client && proposal.amount ? `${proposal.client} - ${proposal.amount}` : 'Untitled Proposal');
                         const displayClient = proposal.client_name || proposal.client || 'Unknown Client';
-                        const displayAmount = proposal.total_amount ? `$${parseFloat(proposal.total_amount).toLocaleString()}` : (proposal.amount || '$0');
+                        const displayAmount = proposal.total_amount ? `$${calculateTotalWithTax(proposal).toLocaleString()}` : (proposal.amount || '$0');
                         const displayStatus = proposal.status || 'Draft';
                         const displayDate = proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : (proposal.created || new Date().toLocaleDateString());
                         
@@ -1088,150 +1171,6 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
           </div>
         );
 
-      case 'ai-insights':
-        return (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <FaBrain className="text-3xl text-purple-600" />
-                <h2 className="text-3xl font-bold text-gray-800">ConsecIQ AI Insights</h2>
-              </div>
-              <div className="text-sm text-gray-500">Powered by Advanced AI Analytics</div>
-            </div>
-            
-            {/* AI Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaRocket className="text-2xl text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Average Win Rate</h3>
-                </div>
-                <p className="text-3xl font-bold text-blue-600">
-                  {proposals.length > 0 ? Math.round(proposals.reduce((sum, p) => {
-                    const winProb = p.ai_win_probability || aiAnalysis[p.id]?.winProbability || getConsistentAIData(p).winProbability;
-                    return sum + winProb;
-                  }, 0) / proposals.length) : 75}%
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Based on AI analysis</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaLightbulb className="text-2xl text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Revenue Potential</h3>
-                </div>
-                <p className="text-3xl font-bold text-green-600">
-                  +${Math.floor(proposals.reduce((sum, p) => {
-                    const currentPrice = p.total_amount || 10000;
-                    const suggestedPrice = p.ai_suggested_price || aiAnalysis[p.id]?.suggestedPricing || getConsistentAIData(p).suggestedPricing;
-                    return sum + (suggestedPrice - currentPrice);
-                  }, 0)).toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Optimization opportunity</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaExclamationTriangle className="text-2xl text-orange-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">High-Risk Proposals</h3>
-                </div>
-                <p className="text-3xl font-bold text-orange-600">
-                  {proposals.filter(p => {
-                    const winProb = p.ai_win_probability || aiAnalysis[p.id]?.winProbability || getConsistentAIData(p).winProbability;
-                    return winProb < 70;
-                  }).length}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Need attention</p>
-              </div>
-            </div>
-
-            {/* Detailed AI Analysis for Each Proposal */}
-            <div className="space-y-6">
-              {proposals.map((proposal) => (
-                <div key={proposal.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-800">{proposal.title}</h3>
-                      <p className="text-gray-600">{proposal.client} • {proposal.amount}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Win Probability</p>
-                        <p className={`text-2xl font-bold ${
-                          (proposal.ai_win_probability || aiAnalysis[proposal.id]?.winProbability || getConsistentAIData(proposal).winProbability) >= 80 ? 'text-green-600' :
-                          (proposal.ai_win_probability || aiAnalysis[proposal.id]?.winProbability || getConsistentAIData(proposal).winProbability) >= 60 ? 'text-yellow-600' :
-                          'text-red-600'
-                        }`}>
-                          {proposal.ai_win_probability || aiAnalysis[proposal.id]?.winProbability || getConsistentAIData(proposal).winProbability}%
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">AI Confidence</p>
-                        <p className="text-2xl font-bold text-purple-600">{proposal.ai_confidence || aiAnalysis[proposal.id]?.confidence || getConsistentAIData(proposal).confidence}%</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                        <FaLightbulb className="text-green-600" />
-                        Market Analysis
-                      </h4>
-                      <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                        {proposal.ai_market_analysis || aiAnalysis[proposal.id]?.marketAnalysis || getConsistentAIData(proposal).marketAnalysis}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                        <FaRocket className="text-blue-600" />
-                        AI Recommendations
-                      </h4>
-                      <p className="text-gray-700 bg-blue-50 p-4 rounded-lg">
-                        {proposal.ai_recommendations || aiAnalysis[proposal.id]?.recommendations || getConsistentAIData(proposal).recommendations}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <FaExclamationTriangle className="text-orange-600" />
-                      Risk Factors
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {(() => {
-                        const riskFactors = proposal.ai_risk_factors || 
-                                          aiAnalysis[proposal.id]?.riskFactors || 
-                                          getConsistentAIData(proposal).riskFactors || [];
-                        return Array.isArray(riskFactors) ? riskFactors : [];
-                      })().map((risk, index) => (
-                        <span key={index} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                          {risk}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Current Price: <span className="font-semibold">{proposal.total_amount ? `$${proposal.total_amount.toLocaleString()}` : proposal.amount}</span></p>
-                        <p className="text-sm text-gray-600">AI Suggested: <span className="font-semibold text-green-600">${(proposal.ai_suggested_price || aiAnalysis[proposal.id]?.suggestedPricing || getConsistentAIData(proposal).suggestedPricing).toLocaleString()}</span></p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-semibold text-green-600">
-                          +${Math.floor((proposal.ai_suggested_price || aiAnalysis[proposal.id]?.suggestedPricing || getConsistentAIData(proposal).suggestedPricing) - (proposal.total_amount || 10000)).toLocaleString()}
-                        </p>
-                        <p className="text-sm text-gray-600">Potential increase</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
 
       case 'analytics':
         return (
@@ -1366,6 +1305,65 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     >
       {renderContent()}
       
+      {/* AI Generator Modal */}
+      {showAIGenerator && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-xl shadow-2xl max-w-2xl w-full mx-4">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <FaBrain className="text-3xl text-purple-600" />
+                <h3 className="text-2xl font-bold text-gray-800">Generate Line Items with ConsecQuote AI</h3>
+              </div>
+              <p className="text-gray-600">Describe what you need and let AI generate detailed line items for your proposal</p>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">What services or products do you need line items for?</label>
+                <textarea
+                  rows={6}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                  placeholder="Example: I need to build a complete e-commerce website with user authentication, product catalog, shopping cart, payment integration, admin dashboard, and mobile responsiveness. The project should include SEO optimization and 3 months of maintenance."
+                ></textarea>
+              </div>
+              
+              <div className="flex gap-4 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAIGenerator(false);
+                    setAiPrompt('');
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => generateLineItemsWithAI()}
+                  disabled={!aiPrompt.trim() || generatingItems}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {generatingItems ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FaBrain />
+                      Generate Items
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Proposal Detail Modal */}
       {selectedProposal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -1389,7 +1387,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-2xl text-[#14B8A6]">
-                    {selectedProposal.total_amount ? `$${parseFloat(selectedProposal.total_amount).toLocaleString()}` : selectedProposal.amount}
+                    {selectedProposal.total_amount ? `$${calculateTotalWithTax(selectedProposal).toLocaleString()}` : selectedProposal.amount}
                   </p>
                 </div>
               </div>

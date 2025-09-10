@@ -110,7 +110,7 @@ export default function AppLayout({
         {/* Sidebar */}
         <aside className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed lg:relative lg:translate-x-0 w-64 bg-white shadow-md border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out lg:transition-none h-full`}>
+        } fixed lg:relative lg:translate-x-0 w-64 sm:w-72 lg:w-64 bg-white shadow-md border-r border-gray-200 z-50 transition-transform duration-300 ease-in-out lg:transition-none h-full mobile-scroll`}>
           {/* App Header */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -125,19 +125,22 @@ export default function AppLayout({
           </div>
 
           {/* Menu Items */}
-          <nav className="p-4 space-y-2">
+          <nav className="p-3 sm:p-4 space-y-1 sm:space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setSidebarOpen(false); // Close mobile sidebar on selection
+                }}
+                className={`w-full flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition touch-friendly ${
                   activeTab === item.id
                     ? "bg-[#14B8A6] text-white"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
+                <span className="text-base sm:text-lg flex-shrink-0">{item.icon}</span>
+                <span className="font-medium text-sm sm:text-base">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -145,26 +148,26 @@ export default function AppLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 xl:p-8 overflow-auto mobile-scroll">
           {children}
         </main>
       </div>
 
       {/* Mobile App Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
         <div className="flex">
           {mainApps.map((app) => (
             <button
               key={app.id}
               onClick={() => navigate(app.route)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs ${
+              className={`flex-1 flex flex-col items-center gap-1 py-2 sm:py-3 text-xs touch-friendly ${
                 window.location.hash.slice(1) === app.route
                   ? 'text-[#14B8A6]'
                   : 'text-gray-600'
               }`}
             >
-              {app.icon}
-              <span>{app.name.replace('Consec', '')}</span>
+              <span className="text-lg">{app.icon}</span>
+              <span className="text-xs truncate">{app.name.replace('Consec', '')}</span>
             </button>
           ))}
         </div>
