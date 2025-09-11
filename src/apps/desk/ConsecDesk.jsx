@@ -1829,8 +1829,8 @@ export default function ConsecDesk({ user, navigate, onLogout, hideBottomNav = f
 
       {/* Ticket Creation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 mobile-modal">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mobile-modal-content">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[200] p-2 sm:p-4 mobile-modal">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mobile-modal-content z-[210]">
             <div className="sticky top-0 bg-white flex items-center justify-between p-4 sm:p-6 border-b rounded-t-xl">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Create New Ticket</h3>
               <button
