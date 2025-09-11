@@ -82,7 +82,7 @@ export default function AppRouter() {
     );
   }
 
-  // Route protection for admin routes
+  // Route protection for admin routes and user routes
   const isAdminRoute = currentRoute.startsWith('/admin');
   const isUserRoute = ['/dashboard', '/desk', '/drive', '/quote'].includes(currentRoute);
   
@@ -107,6 +107,8 @@ export default function AppRouter() {
 
   // Router Component
   const Router = ({ route, user, navigate, onLogout }) => {
+    // Always use the actual user object for proper data isolation
+    // No dummy user - if not authenticated, user will be null
     const commonProps = { user, navigate, onLogout };
 
     switch (route) {

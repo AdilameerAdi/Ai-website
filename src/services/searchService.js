@@ -1,15 +1,21 @@
 import { supabase } from '../lib/supabase';
+import { userSyncService } from './userSyncService';
 
 const searchService = {
   // Search across all data types
-  searchAll: async (query, limit = 10) => {
+  searchAll: async (query, limit = 10, userId = null) => {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get the current user ID from the session if not provided
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
       }
-
-      const userId = user.id;
+      
+      // If still no user ID, return empty results
+      if (!userId) {
+        return { success: true, data: [], totalCount: 0 };
+      }
+      
       const results = [];
 
       // Search tickets

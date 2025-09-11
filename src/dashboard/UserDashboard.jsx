@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
-import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaHome, FaCog, FaChartBar, FaBell, FaEye, FaEyeSlash, FaShieldAlt, FaBrain, FaRobot, FaMagic, FaLightbulb, FaChevronDown, FaChevronUp, FaTicketAlt, FaComment, FaUpload, FaEdit, FaPlus, FaBars, FaTimes, FaSignOutAlt } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaUser, FaEnvelope, FaBriefcase, FaFolder, FaFileAlt, FaHome, FaCog, FaChartBar, FaBell, FaEye, FaEyeSlash, FaShieldAlt, FaBrain, FaRobot, FaMagic, FaLightbulb, FaChevronDown, FaChevronUp, FaTicketAlt, FaComment, FaUpload, FaEdit, FaPlus, FaSignOutAlt } from "react-icons/fa";
 import { supabase } from "../lib/supabase";
 import { ResponsiveGrid, ResponsiveCard, ResponsiveButton } from '../components/ResponsiveLayout';
 import { QuickSearch } from '../components/SearchComponents';
 import dashboardService from '../services/dashboardService';
 import searchService from '../services/searchService';
-import { authService } from '../services/auth';
 import { aiService } from '../services/aiService';
 
 // Import the actual app components
@@ -15,7 +14,8 @@ import ConsecQuote from '../apps/quote/ConsecQuote';
 
 export default function UserDashboard({ user, onLogout, navigate }) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const dropdownRef = useRef(null);
   const [userStats, setUserStats] = useState({
     desks: 0,
     drives: 0,
@@ -69,6 +69,20 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     }
   }, [user, activeTab]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const loadDashboardStats = async () => {
     try {
       setStatsLoading(true);
@@ -83,20 +97,6 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     }
   };
 
-  const createSampleData = async () => {
-    try {
-      const result = await dashboardService.createSampleData();
-      if (result.success) {
-        alert('Sample data created! Refresh the page to see updated counts.');
-        loadDashboardStats(); // Refresh stats
-      } else {
-        alert('Failed to create sample data: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error creating sample data:', error);
-      alert('Error creating sample data');
-    }
-  };
 
   // Generate AI insights for dashboard
   const generateDashboardInsights = async () => {
@@ -124,16 +124,6 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      // Log logout activity before signing out
-      await authService.logout(user?.id);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-    
-    onLogout();
-  };
 
   const handleSaveSettings = async () => {
     setSettingsLoading(true);
@@ -240,10 +230,19 @@ export default function UserDashboard({ user, onLogout, navigate }) {
     { id: "settings", label: "Settings", icon: <FaCog /> }
   ];
 
-  const handleDropdownToggle = (itemId) => {
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+  const handleDropdownToggle = (itemId, event) => {
     if (openDropdown === itemId) {
       setOpenDropdown(null);
     } else {
+      // Calculate position for fixed positioning
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left
+      });
       setOpenDropdown(itemId);
     }
   };
@@ -263,7 +262,6 @@ export default function UserDashboard({ user, onLogout, navigate }) {
         break;
     }
     setOpenDropdown(null);
-    setSidebarOpen(false);
   };
 
   const handleDeskAction = (actionId) => {
@@ -317,18 +315,10 @@ export default function UserDashboard({ user, onLogout, navigate }) {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="responsive-container">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition touch-friendly"
-              >
-                {sidebarOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
-              </button>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
-                <span className="hidden sm:inline text-gray-400">/</span>
-                <span className="hidden sm:inline text-gray-600 font-medium">Dashboard</span>
-              </div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#14B8A6]">Conseccomms</h1>
+              <span className="hidden sm:inline text-gray-400">/</span>
+              <span className="hidden sm:inline text-gray-600 font-medium">Dashboard</span>
             </div>
 
             <div className="flex items-center gap-4">
@@ -357,71 +347,106 @@ export default function UserDashboard({ user, onLogout, navigate }) {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)] relative">
-        {/* Sidebar */}
-        <aside className={`
-          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          top-16 md:top-0
-        `}>
-          <nav className="p-4 space-y-2 h-full overflow-y-auto">
+      {/* Desktop Navigation */}
+      <div className="hidden md:block bg-white border-b border-gray-200 relative z-[100]">
+        <div className="responsive-container">
+          <div className="flex gap-1 p-2 overflow-x-auto" ref={dropdownRef}>
             {menuItems.map((item) => (
-              <div key={item.id}>
-                {/* Main Menu Item */}
-                <button
-                  onClick={() => {
-                    if (item.hasDropdown) {
-                      handleDropdownToggle(item.id);
-                    } else {
-                      setActiveTab(item.id);
-                      setSidebarOpen(false);
-                      setOpenDropdown(null);
-                    }
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                    activeTab === item.id
-                      ? "bg-[#14B8A6] text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="font-medium flex-1 text-left">{item.label}</span>
-                  {item.hasDropdown && (
-                    <span className="text-sm">
-                      {openDropdown === item.id ? <FaChevronUp /> : <FaChevronDown />}
-                    </span>
-                  )}
-                </button>
-
-                {/* Dropdown Items */}
-                {item.hasDropdown && openDropdown === item.id && (
-                  <div className="ml-4 mt-2 space-y-1 border-l-2 border-gray-200 pl-4">
-                    {item.dropdownItems.map((dropdownItem) => (
-                      <button
-                        key={dropdownItem.id}
-                        onClick={() => handleDropdownItemClick(item.id, dropdownItem.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition text-sm"
-                      >
-                        <span className="text-base">{dropdownItem.icon}</span>
-                        <span className="font-medium">{dropdownItem.label}</span>
-                      </button>
-                    ))}
+              <div key={item.id} className="relative z-[110]">
+                {item.hasDropdown ? (
+                  <div className="relative group flex">
+                    {/* Main button that navigates to the app */}
+                    <button
+                      onClick={() => {
+                        // Direct navigation to the main app
+                        switch(item.id) {
+                          case 'desk':
+                            setActiveTab('desk-full');
+                            break;
+                          case 'drive':
+                            setActiveTab('drive-full');
+                            break;
+                          case 'quote':
+                            setActiveTab('quote-full');
+                            break;
+                          default:
+                            setActiveTab(item.id);
+                        }
+                        setOpenDropdown(null);
+                      }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-l-lg transition whitespace-nowrap flex-1 ${
+                        activeTab === item.id || activeTab.startsWith(item.id)
+                          ? "bg-[#14B8A6] text-white"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span>{item.icon}</span>
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                    {/* Dropdown toggle button */}
+                    <button
+                      onClick={(e) => handleDropdownToggle(item.id, e)}
+                      className={`px-2 py-2 rounded-r-lg transition border-l ${
+                        activeTab === item.id || activeTab.startsWith(item.id)
+                          ? "bg-[#14B8A6] text-white border-white/20"
+                          : "text-gray-700 hover:bg-gray-100 border-gray-300"
+                      }`}
+                    >
+                      <span className="text-sm">
+                        {openDropdown === item.id ? <FaChevronUp /> : <FaChevronDown />}
+                      </span>
+                    </button>
                   </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setOpenDropdown(null);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap ${
+                      activeTab === item.id
+                        ? "bg-[#14B8A6] text-white"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="font-medium">{item.label}</span>
+                  </button>
                 )}
               </div>
             ))}
-          </nav>
-        </aside>
+          </div>
+        </div>
+      </div>
 
-        {/* Overlay for mobile */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden top-16"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+      {/* Fixed Dropdown Menu - rendered outside navigation container */}
+      {openDropdown && (
+        <div 
+          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48 z-[9999] max-h-64 overflow-y-auto"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left
+          }}
+        >
+          {menuItems.find(item => item.id === openDropdown)?.dropdownItems.map((dropdownItem) => (
+            <button
+              key={dropdownItem.id}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDropdownItemClick(openDropdown, dropdownItem.id);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm text-left"
+            >
+              <span>{dropdownItem.icon}</span>
+              <span>{dropdownItem.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Main Content */}
+      <div className="flex h-[calc(100vh-8rem)] relative overflow-visible">
+        {/* Main Content - Full Width */}
         <main className="flex-1 overflow-auto mobile-scroll">
           <div className="p-3 sm:p-4 lg:p-6 xl:p-8 pb-20 md:pb-4">
           {/* Overview Tab */}
@@ -523,31 +548,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                 )}
               </ResponsiveCard>
 
-              {/* Database Test (Temporary - Remove after testing) */}
-              {(userStats.desks === 0 && userStats.drives === 0 && userStats.quotes === 0) && (
-                <ResponsiveCard className="mb-6 sm:mb-8 bg-yellow-50 border-yellow-200">
-                  <h3 className="text-lg font-semibold text-yellow-800 mb-3">Database Setup Test</h3>
-                  <p className="text-yellow-700 text-sm mb-4">
-                    All counts are showing 0. This means either:
-                    <br />• The database tables don't exist yet (run FINAL_DATABASE_SETUP.sql)
-                    <br />• The tables are empty (click button below to create test data)
-                  </p>
-                  <div className="space-y-2">
-                    <button
-                      onClick={createSampleData}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition text-sm"
-                    >
-                      Create Test Data (Tickets + Files)
-                    </button>
-                    <button
-                      onClick={() => window.open('https://supabase.com', '_blank')}
-                      className="ml-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
-                    >
-                      Open Supabase Dashboard
-                    </button>
-                  </div>
-                </ResponsiveCard>
-              )}
+              
 
               {/* Quick Search */}
               <ResponsiveCard className="mb-6 sm:mb-8">
@@ -655,7 +656,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           {activeTab === "desk-full" && (
             <div className="w-full -m-4 sm:-m-6 lg:-m-8">
               <div className="overflow-hidden">
-                <ConsecDesk user={user} navigate={navigate} onLogout={onLogout} />
+                <ConsecDesk user={user} navigate={navigate} onLogout={onLogout} hideBottomNav={true} />
               </div>
             </div>
           )}
@@ -664,7 +665,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           {activeTab === "drive-full" && (
             <div className="w-full -m-4 sm:-m-6 lg:-m-8">
               <div className="overflow-hidden">
-                <ConsecDrive user={user} navigate={navigate} onLogout={onLogout} />
+                <ConsecDrive user={user} navigate={navigate} onLogout={onLogout} hideBottomNav={true} />
               </div>
             </div>
           )}
@@ -673,7 +674,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           {activeTab === "quote-full" && (
             <div className="w-full -m-4 sm:-m-6 lg:-m-8">
               <div className="overflow-hidden">
-                <ConsecQuote user={user} navigate={navigate} onLogout={onLogout} />
+                <ConsecQuote user={user} navigate={navigate} onLogout={onLogout} hideBottomNav={true} />
               </div>
             </div>
           )}
@@ -1027,13 +1028,10 @@ export default function UserDashboard({ user, onLogout, navigate }) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
-        <div className="flex">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom shadow-lg">
+        <div className="flex min-h-[60px]">
           <button
-            onClick={() => {
-              setActiveTab('overview');
-              setSidebarOpen(false);
-            }}
+            onClick={() => setActiveTab('overview')}
             className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
               activeTab === 'overview' ? 'text-[#14B8A6]' : 'text-gray-600'
             }`}
@@ -1043,10 +1041,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           </button>
           
           <button
-            onClick={() => {
-              setActiveTab('desk-full');
-              setSidebarOpen(false);
-            }}
+            onClick={() => setActiveTab('desk-full')}
             className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
               activeTab.includes('desk') ? 'text-[#14B8A6]' : 'text-gray-600'
             }`}
@@ -1056,10 +1051,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           </button>
           
           <button
-            onClick={() => {
-              setActiveTab('drive-full');
-              setSidebarOpen(false);
-            }}
+            onClick={() => setActiveTab('drive-full')}
             className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
               activeTab.includes('drive') ? 'text-[#14B8A6]' : 'text-gray-600'
             }`}
@@ -1069,16 +1061,23 @@ export default function UserDashboard({ user, onLogout, navigate }) {
           </button>
           
           <button
-            onClick={() => {
-              setActiveTab('quote-full');
-              setSidebarOpen(false);
-            }}
+            onClick={() => setActiveTab('quote-full')}
             className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
               activeTab.includes('quote') ? 'text-[#14B8A6]' : 'text-gray-600'
             }`}
           >
             <FaFileAlt className="text-lg" />
             <span>Quote</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs touch-friendly ${
+              activeTab === 'settings' ? 'text-[#14B8A6]' : 'text-gray-600'
+            }`}
+          >
+            <FaCog className="text-lg" />
+            <span>Settings</span>
           </button>
         </div>
       </div>

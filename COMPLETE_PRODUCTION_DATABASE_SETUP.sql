@@ -2,6 +2,12 @@
 -- COMPLETE PRODUCTION DATABASE SETUP FOR AI WEBSITE
 -- This script creates ALL tables with ALL required columns
 -- Run this script ONCE to set up your entire production database
+--
+-- ✅ CASCADE DELETE BUILT-IN: 
+-- All foreign key relationships use ON DELETE CASCADE
+-- When a user is deleted, all related data is automatically removed:
+-- - tickets, files, proposals, notifications, user_activities, 
+-- - user_sessions, password_resets are all auto-deleted
 -- =============================================
 
 -- =============================================
@@ -20,6 +26,7 @@ DROP TABLE IF EXISTS leads CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS user_sessions CASCADE;
+DROP TABLE IF EXISTS password_resets CASCADE;
 DROP TABLE IF EXISTS email_templates CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -290,7 +297,21 @@ CREATE TABLE user_sessions (
 );
 
 -- =============================================
--- STEP 14: Create email_templates table
+-- STEP 14: Create password_resets table
+-- =============================================
+
+CREATE TABLE password_resets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT false,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
+-- STEP 15: Create email_templates table
 -- =============================================
 
 CREATE TABLE email_templates (
@@ -308,7 +329,7 @@ CREATE TABLE email_templates (
 );
 
 -- =============================================
--- STEP 15: Create system_settings table with ALL admin columns
+-- STEP 16: Create system_settings table with ALL admin columns
 -- =============================================
 
 CREATE TABLE system_settings (
@@ -332,7 +353,7 @@ CREATE TABLE system_settings (
 );
 
 -- =============================================
--- STEP 16: Create indexes for performance
+-- STEP 17: Create indexes for performance
 -- =============================================
 
 -- Users table indexes
@@ -409,8 +430,13 @@ CREATE INDEX idx_email_templates_is_active ON email_templates(is_active);
 CREATE INDEX idx_system_settings_category ON system_settings(category);
 CREATE INDEX idx_system_settings_is_public ON system_settings(is_public);
 
+-- Password resets indexes
+CREATE INDEX idx_password_resets_user_id ON password_resets(user_id);
+CREATE INDEX idx_password_resets_token ON password_resets(token);
+CREATE INDEX idx_password_resets_expires_at ON password_resets(expires_at);
+
 -- =============================================
--- STEP 17: Disable Row Level Security for development/production
+-- STEP 18: Disable Row Level Security for development/production
 -- =============================================
 
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
@@ -425,11 +451,12 @@ ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE user_activities DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE password_resets DISABLE ROW LEVEL SECURITY;
 ALTER TABLE email_templates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE system_settings DISABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- STEP 18: Grant permissions for all roles
+-- STEP 19: Grant permissions for all roles
 -- =============================================
 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon;
@@ -440,7 +467,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
 -- =============================================
--- STEP 19: Insert initial production data
+-- STEP 20: Insert initial production data
 -- =============================================
 
 -- Create test user with correct ID
@@ -546,7 +573,7 @@ INSERT INTO email_templates (name, subject, body_html, body_text, category, is_a
 ON CONFLICT DO NOTHING;
 
 -- =============================================
--- STEP 20: Create database functions and triggers
+-- STEP 21: Create database functions and triggers
 -- =============================================
 
 -- Function to update updated_at timestamp
@@ -587,7 +614,7 @@ CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_setting
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================
--- STEP 21: Final verification and status
+-- STEP 22: Final verification and status
 -- =============================================
 
 -- Verify all tables were created

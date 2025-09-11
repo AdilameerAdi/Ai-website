@@ -1,18 +1,17 @@
 import { supabase } from '../lib/supabase';
+import { userSyncService } from './userSyncService';
 
 const dashboardService = {
   // Get dashboard overview statistics
   getDashboardStats: async (userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
+      // Ensure userId is provided for data isolation
+      if (!userId) {
+        console.warn('getDashboardStats called without userId - returning empty stats for data isolation');
+        return { success: true, data: { desks: 0, drives: 0, quotes: 0 } };
       }
-      const authenticatedUserId = user.id;
-      console.log('Getting stats for user:', authenticatedUserId);
-      console.log('User object:', user);
+      
+      console.log('Getting stats for user:', userId);
 
       // Get support tickets count (ConsecDesk) 
       let ticketsCount = 0;
@@ -20,7 +19,7 @@ const dashboardService = {
         const { count, error: ticketsError } = await supabase
           .from('tickets')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', authenticatedUserId);
+          .eq('user_id', userId);
 
         if (ticketsError) {
           console.error('Error fetching tickets count:', ticketsError);
@@ -40,7 +39,7 @@ const dashboardService = {
         const { count, error: filesError } = await supabase
           .from('files')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', authenticatedUserId);
+          .eq('user_id', userId);
 
         if (filesError) {
           console.error('Error fetching files count:', filesError);
@@ -60,7 +59,7 @@ const dashboardService = {
         const { count, error: proposalsError } = await supabase
           .from('proposals')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', authenticatedUserId);
+          .eq('user_id', userId);
 
         if (proposalsError) {
           console.error('Error fetching proposals count:', proposalsError);
@@ -82,100 +81,8 @@ const dashboardService = {
 
       console.log('Dashboard stats:', stats);
 
-      // Debug: Let's also try direct queries to see what's in the tables
-      console.log('=== DEBUG: Raw table queries ===');
-      
-      // Check tickets table directly
-      try {
-        const { data: allTickets, error: allTicketsError } = await supabase
-          .from('tickets')
-          .select('*');
-        console.log('All tickets in database:', allTickets);
-        if (allTickets && allTickets.length > 0) {
-          console.log(`Found ${allTickets.length} total tickets in database`);
-          allTickets.forEach((ticket, index) => {
-            console.log(`Ticket ${index + 1}:`, {
-              id: ticket.id,
-              user_id: ticket.user_id,
-              title: ticket.title,
-              status: ticket.status,
-              matches_current_user: ticket.user_id === authenticatedUserId
-            });
-          });
-          
-          // Fix any user ID mismatches for tickets
-          const mismatchedTickets = allTickets.filter(ticket => ticket.user_id !== authenticatedUserId);
-          if (mismatchedTickets.length > 0) {
-            console.log(`🔧 Fixing ${mismatchedTickets.length} tickets with wrong user_id...`);
-            for (const ticket of mismatchedTickets) {
-              try {
-                const { error: updateError } = await supabase
-                  .from('tickets')
-                  .update({ user_id: authenticatedUserId })
-                  .eq('id', ticket.id);
-                
-                if (updateError) {
-                  console.error('Error updating ticket user_id:', updateError);
-                } else {
-                  console.log(`✅ Fixed ticket: ${ticket.title}`);
-                }
-              } catch (e) {
-                console.error('Exception updating ticket:', e);
-              }
-            }
-          }
-        } else {
-          console.log('❌ No tickets found in tickets table');
-          console.log('💡 Tickets might be stored in a different table or not created yet');
-        }
-        if (allTicketsError) console.error('All tickets error:', allTicketsError);
-      } catch (e) { 
-        console.log('❌ Tickets table might not exist:', e.message);
-        console.log('💡 Try running FINAL_DATABASE_SETUP.sql to create the tickets table');
-      }
-
-      // Check files table directly
-      try {
-        const { data: allFiles, error: allFilesError } = await supabase
-          .from('files')
-          .select('*');
-        console.log('All files in database:', allFiles);
-        if (allFiles && allFiles.length > 0) {
-          console.log(`Found ${allFiles.length} total files in database`);
-          allFiles.forEach((file, index) => {
-            console.log(`File ${index + 1}:`, {
-              id: file.id,
-              user_id: file.user_id,
-              file_name: file.file_name,
-              matches_current_user: file.user_id === authenticatedUserId
-            });
-          });
-          
-          // Fix any user ID mismatches
-          const mismatched = allFiles.filter(file => file.user_id !== authenticatedUserId);
-          if (mismatched.length > 0) {
-            console.log(`🔧 Fixing ${mismatched.length} files with wrong user_id...`);
-            for (const file of mismatched) {
-              try {
-                const { error: updateError } = await supabase
-                  .from('files')
-                  .update({ user_id: authenticatedUserId })
-                  .eq('id', file.id);
-                
-                if (updateError) {
-                  console.error('Error updating file user_id:', updateError);
-                } else {
-                  console.log(`✅ Fixed file: ${file.file_name}`);
-                }
-              } catch (e) {
-                console.error('Exception updating file:', e);
-              }
-            }
-          }
-        }
-        if (allFilesError) console.error('All files error:', allFilesError);
-      } catch (e) { console.log('Files table might not exist'); }
-
+      // Debug: Only log current user's data count
+      console.log(`=== DEBUG: User ${userId} data summary ===`);
       console.log('=== END DEBUG ===');
 
       return { success: true, data: stats };
@@ -188,13 +95,11 @@ const dashboardService = {
   // Get recent activity across all apps
   getRecentActivity: async (userId, limit = 10) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
+      // Ensure userId is provided for proper data isolation
+      if (!userId) {
+        console.warn('getRecentActivity called without userId - returning empty for data isolation');
+        return { success: true, data: [] };
       }
-      const authenticatedUserId = user.id;
 
       const activities = [];
 
@@ -202,7 +107,7 @@ const dashboardService = {
       const { data: recentTickets, error: ticketsError } = await supabase
         .from('tickets')
         .select('id, title, status, created_at')
-        .eq('user_id', authenticatedUserId)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -224,7 +129,7 @@ const dashboardService = {
       const { data: recentFiles, error: filesError } = await supabase
         .from('files')
         .select('id, file_name, file_size, created_at')
-        .eq('user_id', authenticatedUserId)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -246,7 +151,7 @@ const dashboardService = {
       const { data: recentProposals, error: proposalsError } = await supabase
         .from('proposals')
         .select('id, title, status, total_amount, created_at')
-        .eq('user_id', authenticatedUserId)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(5);
 

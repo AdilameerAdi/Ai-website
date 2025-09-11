@@ -57,24 +57,34 @@ export default function AdminUsers({ navigate, onLogout }) {
     }
   };
 
-  // ✅ Delete user (after confirmation)
+  // ✅ Delete user with CASCADE DELETE (all related data auto-deleted)
   const confirmDeleteUser = async () => {
     if (!selectedUser) return;
 
     try {
-      const { error } = await supabase
+      // With CASCADE DELETE constraints in place, we only need to delete the user
+      // All related data (tickets, files, proposals, notifications, feedback, etc.) 
+      // will be automatically deleted by the database
+
+      console.log(`Deleting user ${selectedUser.full_name} and all related data via CASCADE DELETE...`);
+      
+      // Delete the user - CASCADE DELETE will handle all related data automatically
+      const { error: userError } = await supabase
         .from("users")
         .delete()
         .eq("id", selectedUser.id);
 
-      if (error) throw error;
+      if (userError) throw userError;
 
+      // Update UI
       setUsersData(usersData.filter((u) => u.id !== selectedUser.id));
       setShowPopup(false);
       setSelectedUser(null);
+      
+      alert(`User ${selectedUser.full_name} and ALL related data (tickets, files, proposals, notifications, feedback) have been successfully deleted via CASCADE DELETE.`);
     } catch (err) {
       console.error("Error deleting user:", err);
-      alert("Failed to delete user");
+      alert("Failed to delete user: " + err.message);
     }
   };
 
@@ -249,7 +259,20 @@ export default function AdminUsers({ navigate, onLogout }) {
             <p className="text-gray-600 text-sm mb-4">
               Are you sure you want to delete{" "}
               <span className="font-medium">{selectedUser?.full_name}</span>?
-              This action cannot be undone.
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                This will permanently delete:
+              </span>
+              <br />
+              • All user tickets
+              <br />
+              • All uploaded files
+              <br />
+              • All proposals
+              <br />
+              • All related account data
+              <br /><br />
+              <span className="font-medium">This action cannot be undone.</span>
             </p>
             <div className="flex justify-end gap-3">
               <button

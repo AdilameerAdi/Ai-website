@@ -4,13 +4,14 @@ import { FaSignOutAlt, FaHome, FaBriefcase, FaFolder, FaFileAlt, FaCog, FaBell, 
 export default function AppLayout({ 
   appName, 
   appIcon, 
-  user, 
+  user, // eslint-disable-line no-unused-vars
   navigate, 
-  onLogout, 
+  onLogout, // eslint-disable-line no-unused-vars
   menuItems, 
   activeTab, 
   setActiveTab,
-  onSettingsClick,
+  onSettingsClick, // eslint-disable-line no-unused-vars
+  hideBottomNav = false,
   children 
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -114,25 +115,27 @@ export default function AppLayout({
         </main>
       </div>
 
-      {/* Mobile App Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 safe-area-inset-bottom shadow-lg">
-        <div className="flex">
-          {mainApps.map((app) => (
-            <button
-              key={app.id}
-              onClick={() => navigate(app.route)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[60px] transition-all duration-200 ${
-                window.location.hash.slice(1) === app.route
-                  ? 'text-[#14B8A6] bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-              }`}
-            >
-              <span className="text-lg sm:text-xl">{app.icon}</span>
-              <span className="text-xs font-medium truncate leading-tight">{app.name.replace('Consec', '')}</span>
-            </button>
-          ))}
+      {/* Mobile App Navigation - only show if not hidden */}
+      {!hideBottomNav && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 safe-area-inset-bottom shadow-lg">
+          <div className="flex">
+            {mainApps.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => navigate(app.route)}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[60px] transition-all duration-200 ${
+                  window.location.hash.slice(1) === app.route
+                    ? 'text-[#14B8A6] bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-lg sm:text-xl">{app.icon}</span>
+                <span className="text-xs font-medium truncate leading-tight">{app.name.replace('Consec', '')}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

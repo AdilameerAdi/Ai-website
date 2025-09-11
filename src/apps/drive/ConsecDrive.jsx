@@ -4,10 +4,162 @@ import AppLayout from '../shared/AppLayout';
 import { fileService } from '../../services/fileService';
 import { aiService } from '../../services/aiService';
 import { categorizationService } from '../../services/categorizationService';
-import { useAuth } from '../../contexts/AuthContext';
 
-export default function ConsecDrive({ user, navigate, onLogout }) {
-  const { canAccessResource } = useAuth();
+// Helper functions for content extraction
+const extractPDFText = async (file) => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const pdfString = new TextDecoder('latin1').decode(uint8Array);
+    
+    console.log('PDF extraction - looking for text content...');
+    
+    // Multiple approaches to extract text from PDF
+    const extractedTexts = [];
+    
+    // Method 1: Extract text in parentheses (most common PDF text encoding)
+    const parenthesesMatches = pdfString.match(/\(([^)]+)\)/g);
+    if (parenthesesMatches) {
+      parenthesesMatches.forEach(match => {
+        let text = match.replace(/^\(|\)$/g, '');
+        // Decode PDF escape sequences
+        text = text.replace(/\\n/g, ' ');
+        text = text.replace(/\\r/g, ' ');
+        text = text.replace(/\\t/g, ' ');
+        text = text.replace(/\\[0-9]{3}/g, ' ');
+        text = text.replace(/\\\\/g, '\\');
+        text = text.replace(/\\\(/g, '(');
+        text = text.replace(/\\\)/g, ')');
+        
+        if (text.length > 3 && /[a-zA-Z]{2,}/.test(text)) {
+          extractedTexts.push(text);
+        }
+      });
+    }
+    
+    // Method 2: Extract hex-encoded text <...>
+    const hexMatches = pdfString.match(/<([0-9A-Fa-f\s]+)>/g);
+    if (hexMatches) {
+      hexMatches.forEach(match => {
+        try {
+          const hexString = match.replace(/^<|>$/g, '').replace(/\s/g, '');
+          if (hexString.length > 0 && hexString.length % 2 === 0) {
+            let text = '';
+            for (let i = 0; i < hexString.length; i += 2) {
+              const charCode = parseInt(hexString.substr(i, 2), 16);
+              if (charCode >= 32 && charCode <= 126) {
+                text += String.fromCharCode(charCode);
+              }
+            }
+            if (text.length > 3 && /[a-zA-Z]{2,}/.test(text)) {
+              extractedTexts.push(text);
+            }
+          }
+        } catch (e) {
+          // Skip invalid hex sequences
+        }
+      });
+    }
+    
+    // Method 3: Look for stream objects containing text
+    const streamMatches = pdfString.match(/stream\s+([\s\S]*?)\s+endstream/g);
+    if (streamMatches) {
+      streamMatches.forEach(stream => {
+        const streamContent = stream.replace(/^stream\s+|\s+endstream$/g, '');
+        // Look for readable text in streams
+        const readableText = streamContent.match(/[a-zA-Z][a-zA-Z0-9\s.,!?]{10,}/g);
+        if (readableText) {
+          extractedTexts.push(...readableText);
+        }
+      });
+    }
+    
+    // Method 4: Extract any readable ASCII text from the PDF
+    const asciiMatches = pdfString.match(/[a-zA-Z][a-zA-Z0-9\s.,!?;:'"()-]{15,}/g);
+    if (asciiMatches) {
+      asciiMatches.forEach(text => {
+        // Filter out PDF commands and structure
+        if (!/\/[A-Z]|obj\s|endobj|xref|trailer|startxref/.test(text) && 
+            !/^[0-9\s]+$/.test(text)) {
+          extractedTexts.push(text.trim());
+        }
+      });
+    }
+    
+    // Clean and deduplicate extracted text
+    const cleanedTexts = [...new Set(extractedTexts)]
+      .filter(text => text.length > 5)
+      .filter(text => (text.match(/[a-zA-Z]/g) || []).length > text.length * 0.3)
+      .slice(0, 100); // Limit to first 100 unique text segments
+    
+    const finalText = cleanedTexts.join(' ').substring(0, 10000); // First 10KB of text
+    
+    console.log(`PDF extraction result: ${finalText.length} characters, preview:`, finalText.substring(0, 200));
+    
+    return finalText.length > 50 ? finalText : null;
+  } catch (error) {
+    console.error('PDF text extraction error:', error);
+    return null;
+  }
+};
+
+const extractOfficeText = async (file, extension) => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    if (['.docx', '.xlsx', '.pptx'].includes(extension)) {
+      // These are ZIP-based Office formats - extract XML content
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+      
+      // Look for XML text content patterns
+      const textMatches = text.match(/>([^<>]{10,})</g);
+      if (textMatches) {
+        const extractedText = textMatches
+          .map(match => match.replace(/^>|<$/g, ''))
+          .filter(text => /[a-zA-Z]{5,}/.test(text))
+          .join(' ')
+          .substring(0, 5000);
+        
+        return extractedText.length > 100 ? extractedText : null;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Office document text extraction error:', error);
+    return null;
+  }
+};
+
+const analyzeFileStructure = async (file, extension) => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer.slice(0, 10000)); // First 10KB
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+    
+    // Extract any readable strings from the file structure
+    const readableStrings = text.match(/[a-zA-Z][a-zA-Z0-9\s]{10,}/g);
+    if (readableStrings && readableStrings.length > 0) {
+      const extracted = readableStrings
+        .filter(str => str.trim().length > 5)
+        .slice(0, 20)
+        .join(' ')
+        .substring(0, 1000);
+      
+      return `STRUCTURE_ANALYSIS:${extension}:${extracted}`;
+    }
+    
+    return `BINARY_FILE:${extension}:${file.size}:${file.name}`;
+  } catch (error) {
+    console.error('File structure analysis error:', error);
+    return `ANALYSIS_FAILED:${extension}:${file.size}:${file.name}`;
+  }
+};
+
+export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = false }) {
+  // Use actual user ID for proper data isolation
+  const userId = user?.id || null;
   const [activeTab, setActiveTab] = useState('files');
   const [files, setFiles] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -30,14 +182,12 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
     loadFolders();
     loadFileStats();
     loadAIInsights();
-  }, [user]);
+  }, []);
 
   const loadFiles = async () => {
-    if (!user) return;
-    
     try {
       setLoading(true);
-      const result = await fileService.getUserFiles(user.id, 50, 0, currentFolderId);
+      const result = await fileService.getUserFiles(userId, 50, 0, currentFolderId);
       if (result.success) {
         setFiles(result.data);
       } else {
@@ -54,10 +204,8 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   };
 
   const loadFolders = async () => {
-    if (!user) return;
-    
     try {
-      const result = await fileService.getUserFolders(user.id, currentFolder);
+      const result = await fileService.getUserFolders(userId, currentFolder);
       if (result.success) {
         setFolders(result.data);
       } else {
@@ -71,15 +219,13 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   };
 
   const loadFileStats = async () => {
-    if (!user) return;
-    
     try {
-      const statsResult = await fileService.getFileStats(user.id);
+      const statsResult = await fileService.getFileStats(userId);
       if (statsResult.success) {
         setFileStats(statsResult.data);
       }
 
-      const analyticsResult = await fileService.getStorageAnalytics(user.id);
+      const analyticsResult = await fileService.getStorageAnalytics(userId);
       if (analyticsResult.success) {
         setStorageAnalytics(analyticsResult.data);
       }
@@ -89,13 +235,11 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   };
 
   const loadAIInsights = async () => {
-    if (!user) return;
-    
     try {
       const [insightsResult, duplicatesResult, suggestionsResult] = await Promise.all([
-        fileService.getAIInsights(user.id),
-        fileService.getDuplicateAnalysis(user.id),
-        fileService.getOrganizationSuggestions(user.id)
+        fileService.getAIInsights(userId),
+        fileService.getDuplicateAnalysis(userId),
+        fileService.getOrganizationSuggestions(userId)
       ]);
 
       if (insightsResult.success) {
@@ -114,13 +258,13 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file || !user) return;
+    if (!file) return;
 
     try {
       setUploading(true);
       
       // Upload file to storage
-      const folderPath = currentFolder || `user_${user.id}`;
+      const folderPath = currentFolder || 'uploads';
       const uploadResult = await fileService.uploadFile(file, folderPath);
       if (!uploadResult.success) {
         throw new Error(uploadResult.error);
@@ -129,24 +273,82 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
       // Add folder path to the file data
       uploadResult.data.folderPath = currentFolder;
 
-      // Generate AI analysis for the file
-      const aiAnalysis = await categorizationService.categorizeFile({
+      // Read file content from ALL non-image files (including PDFs)
+      let fileContent = null;
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.bmp', '.webp', '.ico', '.tiff', '.tif'];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      const isImage = imageExtensions.includes(fileExt) || file.type.startsWith('image/');
+      
+      // Attempt to read content from all non-image files
+      if (!isImage && file.size < 10000000) { // 10MB limit
+        try {
+          if (fileExt === '.pdf') {
+            // For PDFs, try to extract text using browser-compatible method
+            console.log('Attempting to extract text from PDF...');
+            fileContent = await extractPDFText(file);
+            if (fileContent && fileContent.length > 50) {
+              console.log(`Successfully extracted ${fileContent.length} characters from PDF`);
+            } else {
+              console.log('PDF text extraction yielded minimal content');
+              fileContent = await analyzeFileStructure(file, fileExt);
+            }
+          } else if (['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'].includes(fileExt)) {
+            // For Office documents, try to extract readable content
+            console.log(`Attempting to extract text from ${fileExt.toUpperCase()} document...`);
+            fileContent = await extractOfficeText(file, fileExt);
+            if (!fileContent || fileContent.length < 50) {
+              fileContent = await analyzeFileStructure(file, fileExt);
+            }
+          } else {
+            // For text-based files, read directly
+            fileContent = await file.text();
+            console.log(`Successfully read text content from ${file.name}: ${fileContent.length} characters`);
+          }
+        } catch (err) {
+          console.log('Primary content extraction failed, trying alternative methods:', err);
+          try {
+            // Fallback: analyze file structure and extract what we can
+            fileContent = await analyzeFileStructure(file, fileExt);
+          } catch (err2) {
+            console.log('All content extraction methods failed:', err2);
+            fileContent = `CONTENT_EXTRACTION_FAILED:${fileExt}:${file.size}:${file.name}`;
+          }
+        }
+      } else if (isImage) {
+        console.log(`${file.name} is an image - content reading not applicable`);
+      } else {
+        console.log(`${file.name} is too large (${(file.size/1024/1024).toFixed(1)}MB) for content extraction`);
+      }
+      
+      // Generate AI analysis for the file with content
+      console.log(`Generating AI analysis for ${file.name} with content length:`, fileContent?.length || 0);
+      console.log(`First 200 chars of content:`, fileContent?.substring(0, 200) || 'No content');
+      
+      const aiAnalysis = await aiService.analyzeFileContent({
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      }, fileContent);
+      
+      // Also get categorization
+      const categorization = await categorizationService.categorizeFile({
         filename: file.name,
         fileType: file.type,
         fileSize: file.size,
-        content: ''
+        content: fileContent || ''
       });
 
       // Save file metadata with folder ID and AI analysis
       const metadataResult = await fileService.saveFileMetadata(
         {
           ...uploadResult.data,
-          aiCategory: aiAnalysis.category,
+          aiCategory: aiAnalysis.category || categorization.classification?.primaryCategory,
           aiKeywords: aiAnalysis.keywords || [],
           aiSummary: aiAnalysis.summary || '',
-          aiPriority: aiAnalysis.priority || 'medium'
+          aiPriority: aiAnalysis.priority || 'medium',
+          aiSuggestedTags: aiAnalysis.suggestedTags || categorization.classification?.suggestedTags || []
         }, 
-        user.id, 
+        userId, 
         currentFolderId
       );
       if (!metadataResult.success) {
@@ -175,7 +377,7 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
     if (!confirm('Are you sure you want to delete this file?')) return;
 
     try {
-      const result = await fileService.deleteFile(fileId, user.id);
+      const result = await fileService.deleteFile(fileId, userId);
       if (result.success) {
         loadFiles();
         loadFileStats();
@@ -190,11 +392,11 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !user) return;
+    if (!searchQuery.trim()) return;
 
     try {
       setLoading(true);
-      const result = await fileService.searchFiles(searchQuery, user.id);
+      const result = await fileService.searchFiles(searchQuery, userId);
       if (result.success) {
         setFiles(result.data);
       }
@@ -206,10 +408,10 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   };
 
   const createFolder = async (folderName) => {
-    if (!folderName.trim() || !user) return;
+    if (!folderName.trim()) return;
 
     try {
-      const result = await fileService.createFolder(folderName, currentFolder, user.id);
+      const result = await fileService.createFolder(folderName, currentFolder, userId);
       if (result.success) {
         await loadFolders();
         alert('Folder created successfully!');
@@ -225,7 +427,7 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   // Apply AI tags to file
   const handleApplyAITags = async (fileId) => {
     try {
-      const result = await fileService.applyAITags(fileId, user.id);
+      const result = await fileService.applyAITags(fileId, userId);
       if (result.success) {
         await loadFiles();
         alert('AI tags applied successfully!');
@@ -241,7 +443,7 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   // Find similar files
   const handleFindSimilarFiles = async (fileId) => {
     try {
-      const result = await fileService.findSimilarFiles(fileId, user.id);
+      const result = await fileService.findSimilarFiles(fileId, userId);
       if (result.success && result.data.length > 0) {
         setSelectedFile({ id: fileId, similarFiles: result.data });
         setShowAIModal(true);
@@ -257,7 +459,7 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
   // Toggle favorite status
   const handleToggleFavorite = async (fileId) => {
     try {
-      const result = await fileService.toggleFavorite(fileId, user.id);
+      const result = await fileService.toggleFavorite(fileId, userId);
       if (result.success) {
         await loadFiles();
       } else {
@@ -620,77 +822,6 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
               <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                 <FaBrain className="text-blue-600" />
                 <span className="text-blue-600 font-semibold">AI Powered</span>
-              </div>
-            </div>
-
-            {/* AI Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-green-50 to-teal-50 p-6 rounded-xl border border-green-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaTags className="text-2xl text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Auto-Tagging</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tagged Files</span>
-                    <span className="font-bold text-[#14B8A6]">{aiInsights?.taggedFiles || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Accuracy</span>
-                    <span className="font-bold text-green-600">{aiInsights?.accuracy || 0}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaMagic className="text-2xl text-purple-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Duplicates</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Found</span>
-                    <span className="font-bold text-red-600">{duplicateAnalysis?.duplicateCount || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Space Saved</span>
-                    <span className="font-bold text-[#14B8A6]">{duplicateAnalysis ? formatFileSize(duplicateAnalysis.spaceSaved) : '0 MB'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-xl border border-orange-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaLightbulb className="text-2xl text-orange-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Organization</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Suggestions</span>
-                    <span className="font-bold text-orange-600">{organizationSuggestions?.totalSuggestions || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Implemented</span>
-                    <span className="font-bold text-green-600">{organizationSuggestions?.implementedSuggestions || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <FaSearch className="text-2xl text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">Smart Search</h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Indexed Files</span>
-                    <span className="font-bold text-[#14B8A6]">{files.length.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Search Speed</span>
-                    <span className="font-bold text-green-600">0.1s</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -1108,6 +1239,7 @@ export default function ConsecDrive({ user, navigate, onLogout }) {
       menuItems={menuItems}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      hideBottomNav={hideBottomNav}
     >
       {renderContent()}
     </AppLayout>

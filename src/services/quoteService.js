@@ -28,54 +28,12 @@ export const quoteService = {
   // Create new proposal
   createProposal: async (proposalData, userId) => {
     try {
-      // Get the current authenticated user to ensure correct user_id
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        throw new Error('User not authenticated');
+      // Ensure userId is provided for data isolation
+      if (!userId) {
+        console.error('createProposal called without userId');
+        return { success: false, error: 'User ID required for creating proposals' };
       }
-      
-      // Use the authenticated user's ID instead of the passed userId
-      const authenticatedUserId = user.id;
-      console.log('Using authenticated user ID:', authenticatedUserId);
-      
-      // Ensure user exists in users table before creating proposal
-      const { data: existingUser, error: userCheckError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', authenticatedUserId)
-        .single();
-      
-      if (userCheckError && userCheckError.code === 'PGRST116') {
-        // User doesn't exist, create user record
-        console.log('Creating user record for proposal creation:', authenticatedUserId);
-        
-        const { error: createUserError } = await supabase
-          .from('users')
-          .insert({
-            id: authenticatedUserId,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-            password: 'AUTH_MANAGED',
-            role: 'user',
-            subscription_plan: 'free',
-            subscription_status: 'active',
-            storage_used: 0,
-            storage_limit: 5368709120,
-            is_email_verified: user.email_confirmed_at ? true : false
-          });
-        
-        if (createUserError) {
-          // If user already exists (email conflict), that's fine - continue with proposal creation
-          if (createUserError.code === '23505') {
-            console.log('User already exists, continuing with proposal creation');
-          } else {
-            console.error('Failed to create user record:', createUserError);
-            throw new Error('Failed to create user record: ' + createUserError.message);
-          }
-        }
-        console.log('User record created successfully');
-      }
+      console.log('Creating proposal for user:', userId);
       
       const proposalNumber = await quoteService.generateProposalNumber();
       
@@ -86,7 +44,7 @@ export const quoteService = {
       const { data: proposal, error: proposalError } = await supabase
         .from('proposals')
         .insert({
-          user_id: authenticatedUserId, // Use authenticated user ID
+          user_id: userId, // Use default user ID
           proposal_number: proposalNumber,
           title: proposalData.title,
           client_name: proposalData.clientName,
@@ -134,13 +92,12 @@ export const quoteService = {
   // Get user proposals with pagination
   getUserProposals: async (userId, limit = 50, offset = 0, status = null) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
+      // Ensure userId is provided for data isolation
+      if (!userId) {
+        console.warn('getUserProposals called without userId - returning empty for data isolation');
+        return { success: true, data: [] };
       }
-      const authenticatedUserId = user.id;
+      
       let query = supabase
         .from('proposals')
         .select(`
@@ -149,7 +106,7 @@ export const quoteService = {
             id, item_name, description, quantity, unit_price, total_price, sort_order
           )
         `)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID
+        .eq('user_id', userId) // Use provided user ID for data isolation
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -171,13 +128,7 @@ export const quoteService = {
   // Get single proposal by ID
   getProposal: async (proposalId, userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const { data, error } = await supabase
         .from('proposals')
@@ -188,7 +139,7 @@ export const quoteService = {
           )
         `)
         .eq('id', proposalId)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID
+        .eq('user_id', userId) // Use authenticated user ID
         .single();
 
       if (error) throw error;
@@ -203,19 +154,13 @@ export const quoteService = {
   // Update proposal
   updateProposal: async (proposalId, userId, updateData) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       // Update proposal
       const { data: proposal, error: proposalError } = await supabase
         .from('proposals')
         .update(updateData)
         .eq('id', proposalId)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID
+        .eq('user_id', userId) // Use authenticated user ID
         .select()
         .single();
 
@@ -268,18 +213,12 @@ export const quoteService = {
   // Delete proposal
   deleteProposal: async (proposalId, userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       const { error } = await supabase
         .from('proposals')
         .delete()
         .eq('id', proposalId)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID;
+        .eq('user_id', userId) // Use authenticated user ID;
 
       if (error) throw error;
 
@@ -293,13 +232,7 @@ export const quoteService = {
   // Update proposal status
   updateProposalStatus: async (proposalId, userId, status, additionalData = {}) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const updateData = { status, ...additionalData };
       
@@ -316,7 +249,7 @@ export const quoteService = {
         .from('proposals')
         .update(updateData)
         .eq('id', proposalId)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID
+        .eq('user_id', userId) // Use authenticated user ID
         .select()
         .single();
 
@@ -332,13 +265,7 @@ export const quoteService = {
   // Search proposals
   searchProposals: async (userId, searchTerm, filters = {}) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       let query = supabase
         .from('proposals')
@@ -348,7 +275,7 @@ export const quoteService = {
             id, item_name, description, quantity, unit_price, total_price, sort_order
           )
         `)
-        .eq('user_id', authenticatedUserId) // Use authenticated user ID;
+        .eq('user_id', userId) // Use authenticated user ID;
 
       // Add text search
       if (searchTerm) {
@@ -392,18 +319,16 @@ export const quoteService = {
   // Get proposal statistics
   getProposalStats: async (userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
+      // Ensure userId is provided for data isolation
+      if (!userId) {
+        console.error('getProposalStats called without userId');
+        return { success: false, error: 'User ID required for proposal stats' };
       }
-      const authenticatedUserId = user.id;
       
       const { data: proposals, error } = await supabase
         .from('proposals')
         .select('status, total_amount, created_at')
-        .eq('user_id', authenticatedUserId);
+        .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -437,13 +362,7 @@ export const quoteService = {
   // Update AI analysis for proposal
   updateAIAnalysis: async (proposalId, userId, aiAnalysis) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const { data, error } = await supabase
         .from('proposals')
@@ -455,7 +374,7 @@ export const quoteService = {
           ai_recommendations: aiAnalysis.recommendations
         })
         .eq('id', proposalId)
-        .eq('user_id', authenticatedUserId)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -471,13 +390,7 @@ export const quoteService = {
   // Get proposals needing AI analysis
   getProposalsForAIAnalysis: async (userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const { data, error } = await supabase
         .from('proposals')
@@ -487,7 +400,7 @@ export const quoteService = {
             id, item_name, description, quantity, unit_price, total_price
           )
         `)
-        .eq('user_id', authenticatedUserId)
+        .eq('user_id', userId)
         .is('ai_win_probability', null)
         .neq('status', 'draft')
         .order('created_at', { ascending: false });
@@ -504,13 +417,7 @@ export const quoteService = {
   // Create proposal template
   createTemplate: async (userId, templateData) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const { data, error } = await supabase
         .from('proposal_templates')
@@ -536,13 +443,7 @@ export const quoteService = {
   // Get user templates
   getUserTemplates: async (userId) => {
     try {
-      // Get the current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('Auth error:', authError);
-        return { success: false, error: 'User not authenticated' };
-      }
-      const authenticatedUserId = user.id;
+      // Use the provided user ID directly
       
       const { data, error } = await supabase
         .from('proposal_templates')

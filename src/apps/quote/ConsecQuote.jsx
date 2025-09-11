@@ -5,7 +5,9 @@ import { apiService } from '../../services/api.js';
 import { exportService } from '../../services/exportService.js';
 import { quoteService } from '../../services/quoteService.js';
 
-export default function ConsecQuote({ user, navigate, onLogout }) {
+export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = false }) {
+  // Use actual user ID for proper data isolation
+  const userId = user?.id || null;
   const [activeTab, setActiveTab] = useState('dashboard');
   const [aiAnalysis, setAiAnalysis] = useState({});
   const [loadingAI, setLoadingAI] = useState(false);
@@ -172,7 +174,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       
       // Update proposal in database with AI analysis
       try {
-        await quoteService.updateAIAnalysis(proposal.id, user.id, dynamicAIData);
+        await quoteService.updateAIAnalysis(proposal.id, userId, dynamicAIData);
       } catch (dbError) {
         console.log('Database update failed, but AI analysis still available in memory');
       }
@@ -229,7 +231,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     
     try {
       // Use the API service to generate line items with AI
-      const response = await apiService.generateLineItems(aiPrompt, user.id);
+      const response = await apiService.generateLineItems(aiPrompt, userId);
       
       if (response.success && response.data && response.data.length > 0) {
         // Replace existing line items with AI-generated ones
@@ -254,7 +256,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
   const loadProposals = async () => {
     try {
       setLoading(true);
-      const result = await quoteService.getUserProposals(user.id);
+      const result = await quoteService.getUserProposals(userId);
       if (result.success) {
         const proposalsData = result.data || [];
         setProposals(proposalsData);
@@ -280,7 +282,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
   // Load proposal statistics
   const loadProposalStats = async () => {
     try {
-      const result = await quoteService.getProposalStats(user.id);
+      const result = await quoteService.getProposalStats(userId);
       if (result.success) {
         setProposalStats(result.data);
       }
@@ -332,7 +334,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
         taxPercentage: parseFloat(formData.taxPercentage) || 0
       };
 
-      const result = await quoteService.createProposal(proposalData, user.id);
+      const result = await quoteService.createProposal(proposalData, userId);
 
 
       if (result.success) {
@@ -408,7 +410,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
     if (!confirm('Are you sure you want to delete this proposal?')) return;
 
     try {
-      const result = await quoteService.deleteProposal(proposalId, user.id);
+      const result = await quoteService.deleteProposal(proposalId, userId);
       if (result.success) {
         alert('Proposal deleted successfully!');
         await loadProposals();
@@ -425,7 +427,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
   // Handle status update
   const handleStatusUpdate = async (proposalId, newStatus) => {
     try {
-      const result = await quoteService.updateProposalStatus(proposalId, user.id, newStatus);
+      const result = await quoteService.updateProposalStatus(proposalId, userId, newStatus);
       if (result.success) {
         alert('Proposal status updated successfully!');
         await loadProposals();
@@ -451,7 +453,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       const filters = {};
       if (statusFilter) filters.status = statusFilter;
       
-      const result = await quoteService.searchProposals(user.id, searchQuery, filters);
+      const result = await quoteService.searchProposals(userId, searchQuery, filters);
       if (result.success) {
         setProposals(result.data);
       } else {
@@ -1302,6 +1304,7 @@ export default function ConsecQuote({ user, navigate, onLogout }) {
       menuItems={menuItems}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      hideBottomNav={hideBottomNav}
     >
       {renderContent()}
       

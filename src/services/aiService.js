@@ -1,5 +1,311 @@
 // Core AI Service for ConsecIQ
 export const aiService = {
+  // Analyze file content and generate AI summary (20-25 words)
+  analyzeFileContent: async (file, fileContent = null) => {
+    try {
+      console.log('AI Service - analyzeFileContent called with:', {
+        filename: file.filename,
+        fileType: file.fileType,
+        contentLength: fileContent?.length || 0,
+        contentPreview: fileContent?.substring(0, 100) || 'No content'
+      });
+      
+      const { filename, fileType, fileSize } = file;
+      const fileExt = filename?.substring(filename.lastIndexOf('.')).toLowerCase() || '';
+      
+      // Check if file is an image
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.bmp', '.webp'];
+      const isImage = imageExtensions.includes(fileExt) || fileType?.startsWith('image/');
+      
+      if (isImage) {
+        // For images, provide a generic summary based on file name and type
+        const imageType = fileExt.replace('.', '').toUpperCase();
+        return {
+          success: true,
+          summary: `${imageType} image file uploaded. Visual content analysis requires advanced AI processing for detailed insights about the image contents.`,
+          category: 'image',
+          keywords: ['image', imageType.toLowerCase(), 'visual', 'graphic'],
+          priority: 'low',
+          confidence: 0.95
+        };
+      }
+      
+      // For text-based files, analyze content
+      const textExtensions = ['.txt', '.md', '.csv', '.json', '.xml', '.log'];
+      const codeExtensions = ['.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.py', '.java', '.cpp', '.c'];
+      const documentExtensions = ['.pdf', '.doc', '.docx', '.rtf', '.odt'];
+      const spreadsheetExtensions = ['.xls', '.xlsx', '.ods'];
+      const presentationExtensions = ['.ppt', '.pptx', '.odp'];
+      
+      let summary = '';
+      let category = 'document';
+      let keywords = [];
+      let priority = 'medium';
+      
+      // Determine file type and generate appropriate summary
+      if (textExtensions.includes(fileExt)) {
+        category = 'text';
+        keywords = ['text', 'plain text', 'readable'];
+        summary = await aiService.generateTextSummary(filename, fileContent, 'text');
+      } else if (codeExtensions.includes(fileExt)) {
+        category = 'code';
+        const language = aiService.detectProgrammingLanguage(fileExt);
+        keywords = ['code', language, 'source code', 'programming'];
+        summary = await aiService.generateCodeSummary(filename, fileContent, language);
+        priority = 'high';
+      } else if (documentExtensions.includes(fileExt)) {
+        category = 'document';
+        keywords = ['document', 'text document', 'formatted text'];
+        summary = await aiService.generateDocumentSummary(filename, fileContent);
+      } else if (spreadsheetExtensions.includes(fileExt)) {
+        category = 'spreadsheet';
+        keywords = ['spreadsheet', 'data', 'table', 'calculations'];
+        summary = `Spreadsheet containing data tables and calculations. Analyze for financial data, statistics, or structured information requiring detailed review.`;
+        priority = 'high';
+      } else if (presentationExtensions.includes(fileExt)) {
+        category = 'presentation';
+        keywords = ['presentation', 'slides', 'pitch', 'visual'];
+        summary = `Presentation file with slides for business or educational purposes. Review for key messages, visuals, and communication objectives.`;
+      } else {
+        // Generic file
+        category = 'other';
+        keywords = ['file', 'data', 'content'];
+        summary = `File uploaded successfully. Content type ${fileExt || 'unknown'} requires specialized processing for detailed analysis and insights extraction.`;
+      }
+      
+      // Ensure summary is 20-25 words
+      summary = aiService.trimSummaryToWordLimit(summary, 20, 25);
+      
+      return {
+        success: true,
+        summary: summary,
+        category: category,
+        keywords: keywords,
+        priority: priority,
+        confidence: 0.85,
+        suggestedTags: [...keywords, category, 'auto-analyzed'],
+        contentAnalysis: {
+          hasText: !isImage,
+          isReadable: textExtensions.includes(fileExt) || codeExtensions.includes(fileExt),
+          requiresOCR: documentExtensions.includes(fileExt) && !fileContent,
+          fileSize: fileSize,
+          estimatedReadTime: Math.ceil((fileSize || 0) / 5000) // minutes
+        }
+      };
+    } catch (error) {
+      console.error('File analysis error:', error);
+      return {
+        success: false,
+        summary: 'File uploaded. AI analysis temporarily unavailable. Manual review recommended for content understanding and categorization.',
+        error: error.message
+      };
+    }
+  },
+  
+  // Generate intelligent text file summary (20-25 words)
+  generateTextSummary: async (filename, content, type) => {
+    const name = filename?.replace(/\.[^/.]+$/, '') || 'document';
+    
+    if (!content || content.length < 50) {
+      return `Text file "${name}" contains minimal content. Quick read recommended for full understanding of the brief information provided.`;
+    }
+    
+    // Extract meaningful content insights
+    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    const words = content.split(/\s+/).filter(word => word.length > 0);
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    // Analyze content patterns
+    const hasNumbers = /\d+/.test(content);
+    const hasEmail = /\S+@\S+\.\S+/.test(content);
+    const hasUrl = /https?:\/\/[^\s]+/.test(content);
+    const hasCode = /function|class|import|def|var|let|const|if|for|while/.test(content);
+    const hasJson = /\{.*".*":.*".*".*\}/.test(content);
+    const hasXml = /<\w+.*>.*<\/\w+>/.test(content);
+    const hasCsv = /,.*,.*,/.test(content) && lines.length > 3;
+    const hasMarkdown = /^#+\s|^\*\s|^\-\s/m.test(content);
+    
+    // Extract key phrases and topics
+    const firstSentence = sentences[0]?.trim().substring(0, 100) || '';
+    const keyWords = aiService.extractKeywords(content);
+    const topics = aiService.identifyTopics(content);
+    
+    // Generate context-aware summary
+    if (hasJson) {
+      return `JSON file "${name}" containing structured data with ${keyWords.slice(0,2).join(' and ')} information. ${words.length} words of configuration or data.`;
+    } else if (hasXml) {
+      return `XML document "${name}" with structured markup containing ${topics[0] || 'configuration'} data. ${lines.length} lines of hierarchical information.`;
+    } else if (hasCsv) {
+      return `CSV data file "${name}" with ${lines.length} rows containing ${keyWords[0] || 'tabular'} information. Suitable for spreadsheet analysis.`;
+    } else if (hasMarkdown) {
+      return `Markdown document "${name}" with formatted text about ${topics[0] || 'documentation'}. Contains ${lines.length} lines with structured content.`;
+    } else if (hasCode) {
+      return `Code-related file "${name}" containing programming elements. Includes ${keyWords.slice(0,2).join(' and ')} with ${words.length} words of content.`;
+    } else if (hasEmail && hasUrl) {
+      return `Contact document "${name}" containing email addresses and web links. Useful for communication, networking, or reference purposes.`;
+    } else if (hasNumbers && lines.length > 10) {
+      return `Data file "${name}" with ${lines.length} lines containing numerical information about ${topics[0] || 'metrics'}. Suitable for analysis.`;
+    } else if (filename?.includes('log') || /error|info|debug|warn/.test(content)) {
+      return `Log file "${name}" tracking system events and activities. Contains ${lines.length} entries for debugging or monitoring.`;
+    } else if (firstSentence.length > 10) {
+      return `Document "${name}" about ${topics[0] || 'various topics'}. Begins: "${firstSentence.substring(0,50)}..." - ${words.length} words total.`;
+    } else {
+      return `Text document "${name}" with ${lines.length} lines about ${topics[0] || 'general content'}. Contains ${words.length} words for review.`;
+    }
+  },
+  
+  // Generate intelligent code file summary (20-25 words)
+  generateCodeSummary: async (filename, content, language) => {
+    const name = filename?.replace(/\.[^/.]+$/, '') || 'script';
+    
+    if (!content) {
+      return `${language} code file "${name}" uploaded. Technical review needed to understand functionality, dependencies, and integration requirements.`;
+    }
+    
+    // Count code elements
+    const lines = content.split('\n').filter(line => line.trim() && !line.trim().startsWith('//') && !line.trim().startsWith('#') && !line.trim().startsWith('*'));
+    const functions = (content.match(/function|def|func|fn\s+\w+|const\s+\w+\s*=/g) || []).length;
+    const classes = (content.match(/class\s+\w+|interface\s+\w+|struct\s+\w+/g) || []).length;
+    const imports = (content.match(/import|require|include|using|from\s+['"]|#include/g) || []).length;
+    const variables = (content.match(/var\s+|let\s+|const\s+|int\s+|string\s+|float\s+/g) || []).length;
+    const comments = (content.match(/\/\/|\/\*|\*\/|#|<!--/g) || []).length;
+    
+    // Detect specific patterns
+    const hasApi = /api|fetch|axios|request|response|http|rest|endpoint/i.test(content);
+    const hasDatabase = /sql|database|query|select|insert|update|delete|mongodb|mysql|postgres/i.test(content);
+    const hasUi = /component|render|view|html|css|style|button|input|form|jsx|tsx/i.test(content);
+    const hasTest = /test|spec|expect|assert|describe|it\(/i.test(content);
+    const hasConfig = /config|settings|env|environment|dotenv/i.test(content);
+    
+    // Determine primary purpose
+    let purpose = '';
+    if (hasTest) purpose = 'testing';
+    else if (hasConfig) purpose = 'configuration';
+    else if (hasApi) purpose = 'API';
+    else if (hasDatabase) purpose = 'database';
+    else if (hasUi) purpose = 'UI component';
+    else if (classes > 0) purpose = 'class definition';
+    else if (functions > 0) purpose = 'utility functions';
+    else purpose = 'script';
+    
+    // Extract key identifiers
+    const identifiers = content.match(/(?:function|class|const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g) || [];
+    const mainIdentifier = identifiers[0]?.split(/\s+/)[1] || '';
+    
+    return `${language} ${purpose} file "${name}" with ${functions} functions, ${classes} classes. Contains ${lines.length} lines of ${mainIdentifier ? mainIdentifier + ' ' : ''}code.`;
+  },
+  
+  // Generate document summary (20-25 words) 
+  generateDocumentSummary: async (filename, content) => {
+    console.log('generateDocumentSummary called with:', {
+      filename,
+      contentLength: content?.length || 0,
+      contentType: typeof content,
+      contentPreview: content?.substring(0, 100) || 'No content'
+    });
+    
+    const name = filename?.replace(/\.[^/.]+$/, '') || 'document';
+    const fileExt = filename?.substring(filename.lastIndexOf('.')).toLowerCase() || '';
+    
+    // Handle PDF files with extracted text content
+    if (fileExt === '.pdf' && content && content.length > 100) {
+      console.log('Processing PDF with extracted content...');
+      return aiService.generateExtractedTextSummary(filename, content, fileExt);
+    }
+    
+    // Handle extracted content from binary documents
+    if (content && content.startsWith('STRUCTURE_ANALYSIS:')) {
+      const [_, ext, extractedText] = content.split(':', 3);
+      if (extractedText && extractedText.length > 20) {
+        // Use the extracted text to generate a real content summary
+        return aiService.generateExtractedTextSummary(filename, extractedText, ext);
+      }
+    }
+    
+    // Handle failed extractions - fallback to filename analysis
+    if (content && (content.startsWith('BINARY_DOCUMENT:') || content.startsWith('BINARY_FILE:') || content.startsWith('CONTENT_EXTRACTION_FAILED:'))) {
+      const [_, ext, size, fullName] = content.split(':');
+      return aiService.generateBinaryDocumentSummary(fullName || filename, ext, parseInt(size) || 0);
+    }
+    
+    // Check filename for hints about content
+    const lowerName = filename?.toLowerCase() || '';
+    
+    if (lowerName.includes('contract')) {
+      return `Legal contract document "${name}" containing terms, conditions, and agreements. Requires careful review for obligations and compliance.`;
+    } else if (lowerName.includes('proposal')) {
+      return `Business proposal "${name}" outlining project scope, deliverables, and pricing. Review for client requirements and terms.`;
+    } else if (lowerName.includes('report')) {
+      return `Report document "${name}" presenting analysis, findings, and recommendations. Contains structured information for decision-making purposes.`;
+    } else if (lowerName.includes('invoice') || lowerName.includes('receipt')) {
+      return `Financial document "${name}" with transaction details and payment information. Important for accounting and record keeping.`;
+    } else if (lowerName.includes('resume') || lowerName.includes('cv')) {
+      return `Professional resume/CV document containing career information, skills, and qualifications. Useful for recruitment or professional evaluation.`;
+    } else if (fileExt === '.pdf') {
+      return `PDF document "${name}" with formatted content. Review for important information, visual elements, and document structure.`;
+    } else {
+      return `Document file "${name}" containing formatted text and content. Review for detailed information and business documentation.`;
+    }
+  },
+  
+  // Detect programming language from file extension
+  detectProgrammingLanguage: (fileExt) => {
+    const languages = {
+      '.js': 'JavaScript',
+      '.jsx': 'React/JSX',
+      '.ts': 'TypeScript', 
+      '.tsx': 'React/TypeScript',
+      '.py': 'Python',
+      '.java': 'Java',
+      '.cpp': 'C++',
+      '.c': 'C',
+      '.cs': 'C#',
+      '.rb': 'Ruby',
+      '.go': 'Go',
+      '.rs': 'Rust',
+      '.php': 'PHP',
+      '.swift': 'Swift',
+      '.kt': 'Kotlin',
+      '.html': 'HTML',
+      '.css': 'CSS',
+      '.sql': 'SQL',
+      '.sh': 'Shell Script',
+      '.yml': 'YAML',
+      '.yaml': 'YAML',
+      '.json': 'JSON',
+      '.xml': 'XML'
+    };
+    
+    return languages[fileExt] || 'Code';
+  },
+  
+  // Trim summary to word limit
+  trimSummaryToWordLimit: (text, minWords, maxWords) => {
+    const words = text.split(/\s+/);
+    
+    if (words.length >= minWords && words.length <= maxWords) {
+      return text;
+    }
+    
+    if (words.length < minWords) {
+      // Pad with generic ending
+      const padding = ['for', 'further', 'review', 'and', 'analysis', 'purposes', 'as', 'needed', 'accordingly'];
+      let paddedText = text;
+      let wordCount = words.length;
+      let padIndex = 0;
+      
+      while (wordCount < minWords && padIndex < padding.length) {
+        paddedText += ' ' + padding[padIndex];
+        wordCount++;
+        padIndex++;
+      }
+      
+      return paddedText;
+    }
+    
+    // Trim to max words
+    return words.slice(0, maxWords).join(' ') + '.';
+  },
   // Generate real AI response for ticket analysis
   generateTicketResponse: async (ticketTitle, ticketDescription) => {
     try {
@@ -72,6 +378,58 @@ Technical Support Team`;
   
   // Generate intelligent answers based on question content
   generateIntelligentAnswer: (title, description, combinedText) => {
+    // Deployment Questions - HIGHEST PRIORITY
+    if (combinedText.includes('deploy') && combinedText.includes('netlify')) {
+      return `To deploy your website to Netlify:
+
+1. **Sign up/Login**: Go to netlify.com and create an account
+2. **Connect Repository**: Click "Add new site" → "Import an existing project" → Connect GitHub/GitLab/Bitbucket
+3. **Configure Build**:
+   - Build command: \`npm run build\` (or your build command)
+   - Publish directory: \`build\` or \`dist\` (where built files are)
+4. **Deploy**: Click "Deploy site" - Netlify will build and deploy automatically
+5. **Custom Domain** (optional): Settings → Domain management → Add custom domain
+
+Alternative: Drag & drop your build folder directly to Netlify dashboard.
+
+Your site will be live at: https://[your-site-name].netlify.app`;
+    }
+    
+    if (combinedText.includes('deploy') && combinedText.includes('vercel')) {
+      return `To deploy your website to Vercel:
+
+1. **Install Vercel CLI**: \`npm i -g vercel\`
+2. **Run**: \`vercel\` in your project directory
+3. **Follow prompts**: Select project settings and deployment options
+4. **Automatic deploys**: Connect GitHub for auto-deploy on push
+
+Or use Vercel Dashboard:
+- Go to vercel.com → Import Git Repository
+- Select your repo → Configure → Deploy
+
+Your site will be live instantly at: https://[project-name].vercel.app`;
+    }
+    
+    if (combinedText.includes('deploy') || combinedText.includes('host')) {
+      return `Popular deployment options for your website:
+
+**Static Sites** (HTML/CSS/JS, React, Vue):
+- **Netlify**: Drag & drop or Git integration, free tier available
+- **Vercel**: Optimized for Next.js/React, instant deploys
+- **GitHub Pages**: Free for public repos, perfect for portfolios
+
+**Full-Stack Apps** (Node.js backend):
+- **Heroku**: \`heroku create app-name\` → \`git push heroku main\`
+- **Railway**: One-click deploys from GitHub
+- **Render**: Auto-deploys with free SSL
+
+**Quick Deploy Steps**:
+1. Build your project: \`npm run build\`
+2. Choose platform based on your tech stack
+3. Connect Git repo or upload build folder
+4. Configure environment variables if needed`;
+    }
+    
     // Programming & Technology Questions
     if (combinedText.includes('react')) {
       let response = `React is a JavaScript library for building user interfaces. `;
@@ -153,8 +511,16 @@ Technical Support Team`;
       return `Based on your question about "${title}", I'll provide you with comprehensive information and practical guidance. Let me analyze the specific aspects you've mentioned in: "${description}" and give you actionable insights that directly address your needs.\n\nBest regards,\nSupport Specialist`;
     }
     
-    // For statements or requests
-    return `Thank you for reaching out about "${title}". I understand you need assistance with this topic. Based on the details you've provided: "${description}", I'll ensure you receive specific, helpful guidance that addresses your exact requirements.\n\nBest regards,\nSupport Team`;
+    // For statements or requests - provide direct, actionable help
+    const request = (title + ' ' + description).toLowerCase();
+    
+    // Check if it's a specific request that needs direct action
+    if (request.includes('help') || request.includes('how') || request.includes('need')) {
+      return `I'll help you with "${title}" right away. Based on your request about "${description}", let me provide you with the specific steps and information you need to accomplish your goal.\n\nBest regards,\nSupport Team`;
+    }
+    
+    // For general statements, still be more actionable
+    return `I understand you're working on "${title}". Based on what you've described: "${description}", I'll provide you with practical guidance and next steps to help you achieve your objectives.\n\nBest regards,\nSupport Team`;
   },
   
   // Extract topics from the actual content
@@ -660,5 +1026,180 @@ Technical Support Team`;
       console.error('Insights generation error:', error);
       return { success: false, error: error.message };
     }
+  },
+
+  // Extract key words from content for better summaries
+  extractKeywords: (content) => {
+    const words = content.toLowerCase().split(/\s+/);
+    const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'a', 'an', 'this', 'that', 'these', 'those'];
+    
+    // Count word frequency, excluding common words
+    const wordCount = {};
+    words.forEach(word => {
+      word = word.replace(/[^\w]/g, ''); // Remove punctuation
+      if (word.length > 2 && !commonWords.includes(word)) {
+        wordCount[word] = (wordCount[word] || 0) + 1;
+      }
+    });
+    
+    // Return top keywords
+    return Object.entries(wordCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([word]) => word);
+  },
+
+  // Generate summary from extracted text content (for PDFs, Office docs)
+  generateExtractedTextSummary: (filename, extractedText, extension) => {
+    console.log('generateExtractedTextSummary called with:', {
+      filename,
+      extension,
+      textLength: extractedText?.length || 0,
+      textPreview: extractedText?.substring(0, 200) || 'No text'
+    });
+    
+    const name = filename?.replace(/\.[^/.]+$/, '') || 'document';
+    const text = extractedText.toLowerCase();
+    const words = extractedText.split(/\s+/).filter(word => word.length > 2);
+    const sentences = extractedText.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    // Clean extracted text and get meaningful content
+    const cleanText = extractedText.replace(/[^\w\s.,!?-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const firstMeaningfulSentence = sentences.find(s => s.length > 20 && /[a-zA-Z]{3,}/.test(s)) || sentences[0] || '';
+    
+    console.log('Processing extracted text:', {
+      wordsCount: words.length,
+      sentencesCount: sentences.length,
+      firstSentence: firstMeaningfulSentence?.substring(0, 100) || 'No sentence found'
+    });
+    
+    // Extract key topics and themes from the actual content
+    const topics = aiService.identifyTopics(cleanText);
+    const keywords = aiService.extractKeywords(cleanText);
+    
+    // Detect content patterns from extracted text
+    const hasNumbers = /\d+/.test(extractedText);
+    const hasEmail = /\S+@\S+\.\S+/.test(extractedText);
+    const hasUrl = /https?:\/\/[^\s]+/.test(extractedText);
+    const hasBusinessTerms = /project|proposal|business|company|client|service|management/i.test(extractedText);
+    const hasEducationalTerms = /education|learning|student|course|university|school|research/i.test(extractedText);
+    const hasTechnicalTerms = /system|software|technology|development|implementation|solution/i.test(extractedText);
+    const hasFinancialTerms = /budget|cost|price|payment|financial|revenue|profit/i.test(extractedText);
+    
+    // Generate intelligent summary based on actual content
+    if (hasBusinessTerms && hasFinancialTerms) {
+      return `${extension.toUpperCase()} business document "${name}" discussing ${keywords.slice(0,2).join(' and ')} with financial details. Content: "${firstMeaningfulSentence.substring(0,60)}..."`;
+    } else if (hasEducationalTerms) {
+      return `${extension.toUpperCase()} educational document "${name}" covering ${topics[0] || keywords[0]} topics. Content: "${firstMeaningfulSentence.substring(0,60)}..."`;
+    } else if (hasTechnicalTerms) {
+      return `${extension.toUpperCase()} technical document "${name}" about ${keywords.slice(0,2).join(' and ')} systems. Content: "${firstMeaningfulSentence.substring(0,60)}..."`;
+    } else if (topics.length > 0) {
+      return `${extension.toUpperCase()} document "${name}" discussing ${topics[0]} and ${keywords.slice(0,2).join(', ')}. Content: "${firstMeaningfulSentence.substring(0,60)}..."`;
+    } else if (firstMeaningfulSentence.length > 10) {
+      return `${extension.toUpperCase()} document "${name}" with ${words.length} words of content. Begins: "${firstMeaningfulSentence.substring(0,80)}..."`;
+    } else {
+      const fallbackSummary = `${extension.toUpperCase()} document "${name}" containing ${words.length} words about ${keywords[0] || 'various topics'}. Extracted content available for analysis.`;
+      console.log('Generated fallback summary:', fallbackSummary);
+      return fallbackSummary;
+    }
+  },
+  
+  // Debug wrapper to log final summary result
+  logSummaryResult: (summary, source) => {
+    console.log(`Final summary from ${source}:`, summary);
+    return summary;
+  },
+
+  // Generate smart summary for binary documents based on filename analysis
+  generateBinaryDocumentSummary: (filename, extension, fileSize) => {
+    const name = filename?.replace(/\.[^/.]+$/, '') || 'document';
+    const lowerName = filename?.toLowerCase() || '';
+    const sizeMB = (fileSize / 1024 / 1024).toFixed(1);
+    
+    // Analyze filename for content clues
+    const isProposal = /proposal|quote|estimate|bid/i.test(lowerName);
+    const isReport = /report|analysis|summary|study/i.test(lowerName);
+    const isPresentation = /presentation|slides|pitch|deck/i.test(lowerName);
+    const isContract = /contract|agreement|terms|legal/i.test(lowerName);
+    const isManual = /manual|guide|documentation|handbook/i.test(lowerName);
+    const isResume = /resume|cv|curriculum/i.test(lowerName);
+    const isInvoice = /invoice|bill|payment|receipt/i.test(lowerName);
+    const isEducational = /educat|learn|course|tutorial|lesson/i.test(lowerName);
+    const isBusiness = /business|company|corporate|enterprise/i.test(lowerName);
+    const isProject = /project|plan|scope|requirement/i.test(lowerName);
+    
+    // Extract potential keywords from filename
+    const words = name.split(/[_\-\s]+/).filter(w => w.length > 2);
+    const keywords = words.slice(0, 3).join(', ');
+    
+    // Generate contextual summary based on file type and content clues
+    if (extension === '.pdf') {
+      if (isProposal) {
+        return `PDF proposal "${name}" (${sizeMB}MB) outlining ${keywords} project scope, deliverables, and pricing. Professional business document requiring review.`;
+      } else if (isReport) {
+        return `PDF report "${name}" (${sizeMB}MB) containing ${keywords} analysis and findings. Comprehensive document with data and insights.`;
+      } else if (isPresentation) {
+        return `PDF presentation "${name}" (${sizeMB}MB) with ${keywords} slides and visual content. Business or educational material for review.`;
+      } else if (isContract) {
+        return `PDF contract "${name}" (${sizeMB}MB) containing ${keywords} legal terms and conditions. Important document requiring careful review.`;
+      } else if (isManual) {
+        return `PDF manual "${name}" (${sizeMB}MB) providing ${keywords} instructions and guidance. Reference documentation for procedures and processes.`;
+      } else if (isResume) {
+        return `PDF resume "${name}" (${sizeMB}MB) showcasing ${keywords} professional experience and qualifications. Candidate profile document.`;
+      } else if (isInvoice) {
+        return `PDF invoice "${name}" (${sizeMB}MB) detailing ${keywords} financial transactions and payment information. Business accounting document.`;
+      } else if (isEducational) {
+        return `PDF educational document "${name}" (${sizeMB}MB) covering ${keywords} learning materials and content. Academic or training resource.`;
+      } else if (isBusiness || isProject) {
+        return `PDF business document "${name}" (${sizeMB}MB) regarding ${keywords} operations and planning. Professional document for review.`;
+      } else {
+        return `PDF document "${name}" (${sizeMB}MB) containing ${keywords} information and content. Professional document requiring text extraction for full analysis.`;
+      }
+    } else if (['.doc', '.docx'].includes(extension)) {
+      return `Word document "${name}" (${sizeMB}MB) with ${keywords} content and formatting. Text document requiring Microsoft Office or compatible viewer.`;
+    } else if (['.xls', '.xlsx'].includes(extension)) {
+      return `Excel spreadsheet "${name}" (${sizeMB}MB) containing ${keywords} data, calculations, and tables. Numerical analysis requiring spreadsheet application.`;
+    } else if (['.ppt', '.pptx'].includes(extension)) {
+      return `PowerPoint presentation "${name}" (${sizeMB}MB) with ${keywords} slides and visual content. Interactive presentation requiring compatible viewer.`;
+    } else {
+      return `${extension.toUpperCase()} document "${name}" (${sizeMB}MB) with ${keywords} content. Binary format requiring specialized software for content extraction.`;
+    }
+  },
+
+  // Identify main topics from content
+  identifyTopics: (content) => {
+    const text = content.toLowerCase();
+    
+    // Define topic categories with keywords
+    const topics = {
+      'technology': ['computer', 'software', 'hardware', 'internet', 'digital', 'tech', 'system', 'network', 'database', 'code', 'programming', 'development', 'app', 'application', 'website', 'server', 'cloud'],
+      'business': ['company', 'business', 'marketing', 'sales', 'revenue', 'profit', 'customer', 'client', 'service', 'management', 'strategy', 'finance', 'budget', 'investment'],
+      'education': ['school', 'university', 'student', 'teacher', 'course', 'lesson', 'learning', 'education', 'academic', 'study', 'research', 'knowledge', 'training'],
+      'healthcare': ['health', 'medical', 'doctor', 'hospital', 'patient', 'treatment', 'medicine', 'care', 'disease', 'therapy', 'wellness', 'fitness'],
+      'legal': ['law', 'legal', 'court', 'attorney', 'contract', 'agreement', 'rights', 'policy', 'regulation', 'compliance', 'litigation'],
+      'financial': ['money', 'bank', 'payment', 'financial', 'accounting', 'tax', 'loan', 'credit', 'investment', 'insurance', 'budget', 'cost'],
+      'personal': ['personal', 'family', 'home', 'life', 'travel', 'hobby', 'interest', 'experience', 'story', 'memory'],
+      'communication': ['email', 'phone', 'message', 'contact', 'communication', 'meeting', 'discussion', 'conversation', 'call', 'text']
+    };
+    
+    const topicScores = {};
+    
+    // Score each topic based on keyword matches
+    Object.entries(topics).forEach(([topic, keywords]) => {
+      let score = 0;
+      keywords.forEach(keyword => {
+        const matches = (text.match(new RegExp(keyword, 'g')) || []).length;
+        score += matches;
+      });
+      if (score > 0) {
+        topicScores[topic] = score;
+      }
+    });
+    
+    // Return top topics
+    return Object.entries(topicScores)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([topic]) => topic);
   }
 };

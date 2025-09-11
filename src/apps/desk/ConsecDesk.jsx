@@ -5,7 +5,9 @@ import { supabase } from '../../lib/supabase';
 import { aiService } from '../../services/aiService';
 import { categorizationService } from '../../services/categorizationService';
 
-export default function ConsecDesk({ user, navigate, onLogout }) {
+export default function ConsecDesk({ user, navigate, onLogout, hideBottomNav = false }) {
+  // Use actual user ID for proper data isolation
+  const userId = user?.id || null;
   const [activeTab, setActiveTab] = useState('dashboard');
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -639,7 +641,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
       const { data, error } = await supabase
         .from('notifications')
         .insert({
-          user_id: user?.id,
+          user_id: userId,
           title: notificationData.title,
           message: notificationData.message,
           type: notificationData.type || 'info',
@@ -717,9 +719,9 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
       const { data, error } = await supabase
         .from('feedback')
         .insert({
-          user_id: user?.id,
-          user_name: user?.user_metadata?.full_name || user?.email,
-          user_email: user?.email,
+          user_id: userId,
+          user_name: 'Default User',
+          user_email: 'user@example.com',
           category: feedbackData.category,
           subject: feedbackData.subject,
           message: feedbackData.message,
@@ -764,47 +766,28 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      // Try to fetch user-specific tickets first, then all tickets if RLS is disabled
-      let { data, error } = await supabase
+      
+      // Ensure userId is available for data isolation
+      if (!userId) {
+        console.warn('fetchTickets called without userId - setting empty tickets for data isolation');
+        setTickets([]);
+        return;
+      }
+      
+      // Use actual user ID for proper data isolation
+      const { data, error } = await supabase
         .from('tickets')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
-      // If no user-specific tickets found, fetch all tickets (for testing)
-      if (!error && (!data || data.length === 0)) {
-        const allTicketsResult = await supabase
-          .from('tickets')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10);
-        
-        if (!allTicketsResult.error && allTicketsResult.data) {
-          data = allTicketsResult.data;
-        }
-      }
 
       if (error) throw error;
 
       setTickets(data || []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
-      // Fall back to mock data if database fails
-      setTickets([
-        { 
-          id: 1, 
-          title: 'Website not loading', 
-          user_name: 'John Doe', 
-          priority: 'high', 
-          status: 'open', 
-          created_at: '2024-01-15',
-          ai_sentiment: 'frustrated', 
-          ai_urgency: 'high', 
-          ai_category: 'technical', 
-          ai_suggested_response: 'Acknowledge immediately and request diagnostic info',
-          description: 'Unable to access website since morning. Getting timeout errors.'
-        }
-      ]);
+      // Return empty array to maintain data isolation between users
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -834,9 +817,9 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
           priority: formData.priority,
           category: formData.category,
           status: 'open',
-          user_id: user?.id,
-          user_name: user?.user_metadata?.full_name || user?.email,
-          user_email: user?.email,
+          user_id: userId,
+          user_name: 'Default User',
+          user_email: 'user@example.com',
           ai_category: aiCategory.success ? aiCategory.classification.primaryCategory : 'general',
           ai_sentiment: 'neutral',
           ai_urgency: formData.priority,
@@ -1038,8 +1021,8 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
     if (user) {
       setProfileForm(prev => ({
         ...prev,
-        fullName: user.user_metadata?.full_name || user.user_metadata?.name || '',
-        email: user.email || ''
+        fullName: 'Demo User',
+        email: 'demo@example.com'
       }));
     }
   }, [user?.id]);
@@ -1839,6 +1822,7 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onSettingsClick={() => setActiveTab('settings')}
+        hideBottomNav={hideBottomNav}
       >
         {renderContent()}
       </AppLayout>
@@ -1858,29 +1842,15 @@ export default function ConsecDesk({ user, navigate, onLogout }) {
             </div>
             
             <form onSubmit={createTicket} className="p-4 sm:p-6">
-              {/* AI Tips Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <FaBrain className="text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-blue-800 mb-2">💡 Tips for Better AI Responses</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• <strong>Be specific:</strong> Include exact error messages, steps you tried, or technical details</li>
-                      <li>• <strong>Mention context:</strong> Add keywords like "university website", "mobile app", "database error"</li>
-                      <li>• <strong>State your goal:</strong> "I need help creating...", "I want to fix...", "I'm looking for..."</li>
-                      <li>• <strong>Include relevant info:</strong> Operating system, browser, software versions when applicable</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              
 
               {/* Website Issue Keywords */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
                   <FaEnvelope className="text-red-600 mt-1 flex-shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-red-800 mb-2">📞 Need Immediate Contact Info?</h4>
-                    <p className="text-sm text-red-700 mb-2">Use these exact keywords to get our direct contact information:</p>
+                    <h4 className="font-semibold text-red-800 mb-2">if any issue related this website</h4>
+                    <p className="text-sm text-red-700 mb-2">Use these exact keywords</p>
                     <div className="flex flex-wrap gap-2 text-xs">
                       <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"website not working"</span>
                       <span className="bg-red-200 text-red-800 px-2 py-1 rounded">"site down"</span>
