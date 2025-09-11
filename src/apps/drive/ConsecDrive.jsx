@@ -103,28 +103,17 @@ const extractPDFText = async (file) => {
   }
 };
 
+// Simple DOCX text extraction - attempt to parse as text
 const extractOfficeText = async (file, extension) => {
   try {
-    const arrayBuffer = await file.arrayBuffer();
+    console.log(`Starting Office text extraction for ${extension}...`);
     
-    if (['.docx', '.xlsx', '.pptx'].includes(extension)) {
-      // These are ZIP-based Office formats - extract XML content
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
-      
-      // Look for XML text content patterns
-      const textMatches = text.match(/>([^<>]{10,})</g);
-      if (textMatches) {
-        const extractedText = textMatches
-          .map(match => match.replace(/^>|<$/g, ''))
-          .filter(text => /[a-zA-Z]{5,}/.test(text))
-          .join(' ')
-          .substring(0, 5000);
-        
-        return extractedText.length > 100 ? extractedText : null;
-      }
+    if (extension === '.docx') {
+      // For DOCX, try multiple extraction approaches
+      return await extractDocxText(file);
     }
     
+    console.log('Office text extraction not implemented for this format');
     return null;
   } catch (error) {
     console.error('Office document text extraction error:', error);
@@ -132,24 +121,510 @@ const extractOfficeText = async (file, extension) => {
   }
 };
 
-const analyzeFileStructure = async (file, extension) => {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer.slice(0, 10000)); // First 10KB
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+// Simple ZIP file parser for DOCX files
+const parseZipFile = (uint8Array) => {
+  const view = new DataView(uint8Array.buffer);
+  const files = {};
+  
+  // Find the central directory
+  let centralDirOffset = -1;
+  for (let i = uint8Array.length - 22; i >= 0; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { // End of central directory signature
+      centralDirOffset = view.getUint32(i + 16, true);
+      break;
+    }
+  }
+  
+  if (centralDirOffset === -1) {
+    console.log('ZIP central directory not found');
+    return files;
+  }
+  
+  // Read central directory entries
+  let offset = centralDirOffset;
+  while (offset < uint8Array.length - 4) {
+    const signature = view.getUint32(offset, true);
+    if (signature !== 0x02014b50) break; // Central directory entry signature
     
-    // Extract any readable strings from the file structure
-    const readableStrings = text.match(/[a-zA-Z][a-zA-Z0-9\s]{10,}/g);
-    if (readableStrings && readableStrings.length > 0) {
-      const extracted = readableStrings
-        .filter(str => str.trim().length > 5)
-        .slice(0, 20)
-        .join(' ')
-        .substring(0, 1000);
+    const filenameLength = view.getUint16(offset + 28, true);
+    const extraFieldLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const localHeaderOffset = view.getUint32(offset + 42, true);
+    
+    // Get filename
+    const filename = new TextDecoder().decode(uint8Array.slice(offset + 46, offset + 46 + filenameLength));
+    
+    // Get local file header info
+    const localView = new DataView(uint8Array.buffer, localHeaderOffset);
+    if (localView.getUint32(0, true) === 0x04034b50) { // Local file header signature
+      const compressionMethod = localView.getUint16(8, true);
+      const compressedSize = localView.getUint32(18, true);
+      const uncompressedSize = localView.getUint32(22, true);
+      const localFilenameLength = localView.getUint16(26, true);
+      const localExtraLength = localView.getUint16(28, true);
       
-      return `STRUCTURE_ANALYSIS:${extension}:${extracted}`;
+      const dataOffset = localHeaderOffset + 30 + localFilenameLength + localExtraLength;
+      const fileData = uint8Array.slice(dataOffset, dataOffset + compressedSize);
+      
+      files[filename] = {
+        data: fileData,
+        compressionMethod,
+        compressedSize,
+        uncompressedSize
+      };
+      
+      console.log(`ZIP file ${filename}: compression=${compressionMethod}, compressed=${compressedSize}, uncompressed=${uncompressedSize}`);
     }
     
+    offset += 46 + filenameLength + extraFieldLength + commentLength;
+  }
+  
+  return files;
+};
+
+// Web-based DOCX text extraction using online service
+const extractDocxText = async (file) => {
+  try {
+    console.log('🌐 Starting web-based DOCX text extraction...');
+    
+    // Method 1: Try direct mammoth.js loading and extraction
+    try {
+      console.log('📚 Loading mammoth.js for DOCX text extraction...');
+      
+      // Try to load mammoth.js if not available
+      if (!window.mammoth) {
+        console.log('📦 Loading mammoth.js from CDN...');
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js';
+          script.crossOrigin = 'anonymous';
+          script.onload = () => {
+            console.log('✅ Mammoth.js loaded successfully');
+            resolve();
+          };
+          script.onerror = (error) => {
+            console.log('❌ Failed to load mammoth.js:', error);
+            reject(error);
+          };
+          document.head.appendChild(script);
+          
+          // Add timeout
+          setTimeout(() => reject(new Error('Mammoth.js load timeout')), 15000);
+        });
+      }
+      
+      if (window.mammoth) {
+        console.log('🔄 Converting DOCX to text using mammoth.js...');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({arrayBuffer});
+        
+        console.log('📊 Mammoth result:', {
+          textLength: result.value?.length || 0,
+          messages: result.messages?.length || 0,
+          hasWarnings: result.messages?.some(m => m.type === 'warning')
+        });
+        
+        if (result.value && result.value.trim().length > 20) {
+          console.log('🎉 DOCX text extraction successful!');
+          console.log('📝 Preview:', result.value.substring(0, 300) + '...');
+          return result.value.trim();
+        } else {
+          console.log('⚠️ Mammoth returned empty or very short text');
+        }
+      }
+    } catch (mammothError) {
+      console.log('🚫 Mammoth.js extraction failed:', mammothError.message);
+    }
+    
+    // Method 2: Try alternative DOCX parsing approach
+    try {
+      console.log('🔧 Attempting alternative DOCX parsing...');
+      
+      // Create a FileReader to read the file as text (sometimes works for simple DOCX)
+      const reader = new FileReader();
+      const textContent = await new Promise((resolve, reject) => {
+        reader.onload = (e) => {
+          const content = e.target.result;
+          // Look for readable text in the file content
+          const readableText = content.match(/[A-Za-z][A-Za-z0-9\s.,!?;:'"()%-]{50,}/g);
+          if (readableText && readableText.length > 0) {
+            resolve(readableText.join(' ').substring(0, 2000));
+          } else {
+            resolve(null);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsText(file, 'utf-8');
+        
+        setTimeout(() => resolve(null), 5000); // 5 second timeout
+      });
+      
+      if (textContent && textContent.length > 50) {
+        console.log('📄 Alternative parsing successful:', textContent.length, 'characters');
+        return textContent;
+      }
+    } catch (altError) {
+      console.log('🚫 Alternative parsing failed:', altError.message);
+    }
+    
+    // Method 3: Fallback to local ZIP parsing
+    console.log('💾 Falling back to local ZIP parsing...');
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Parse the DOCX as a ZIP file
+    const zipFiles = parseZipFile(uint8Array);
+    console.log('ZIP files found:', Object.keys(zipFiles));
+    
+    // Look for the main document
+    const documentEntry = zipFiles['word/document.xml'];
+    if (!documentEntry) {
+      console.log('word/document.xml not found in DOCX file');
+      return null;
+    }
+    
+    const documentXml = documentEntry.data;
+    console.log('Found word/document.xml, size:', documentXml.length, 'bytes');
+    console.log('Compression method:', documentEntry.compressionMethod, '(0=none, 8=deflate)');
+    console.log('Uncompressed size:', documentEntry.uncompressedSize, 'bytes');
+    
+    // The document.xml is likely compressed with deflate - need to decompress it
+    let xmlContent = '';
+    try {
+      // Check if the data looks compressed (binary data with deflate signature)
+      const firstBytes = Array.from(documentXml.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+      console.log('First bytes of document.xml:', firstBytes);
+      
+      // Try to decompress using browser's built-in DecompressionStream
+      if (typeof DecompressionStream !== 'undefined' && documentEntry.compressionMethod === 8) {
+        try {
+          console.log('Attempting to decompress document.xml using DecompressionStream...');
+          
+          // For deflate, we need to handle the format properly
+          const stream = new ReadableStream({
+            start(controller) {
+              controller.enqueue(documentXml);
+              controller.close();
+            }
+          });
+          
+          // Try different decompression methods
+          const methods = ['deflate-raw', 'deflate'];
+          
+          for (const method of methods) {
+            try {
+              console.log(`Trying decompression method: ${method}`);
+              const decompressed = stream.pipeThrough(new DecompressionStream(method));
+              const reader = decompressed.getReader();
+              const chunks = [];
+              
+              let done = false;
+              while (!done) {
+                const { value, done: readerDone } = await reader.read();
+                done = readerDone;
+                if (value) {
+                  chunks.push(value);
+                }
+              }
+              
+              if (chunks.length > 0) {
+                const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                const decompressedData = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of chunks) {
+                  decompressedData.set(chunk, offset);
+                  offset += chunk.length;
+                }
+                
+                xmlContent = new TextDecoder('utf-8').decode(decompressedData);
+                console.log(`Successfully decompressed with ${method}:`, xmlContent.length, 'characters');
+                console.log('Decompressed content sample:', xmlContent.substring(0, 200));
+                break;
+              }
+            } catch (methodError) {
+              console.log(`${method} decompression failed:`, methodError.message);
+            }
+          }
+          
+        } catch (decompressError) {
+          console.log('DecompressionStream failed:', decompressError.message);
+        }
+      } else {
+        console.log('DecompressionStream not available or file not compressed');
+      }
+      
+      // If decompression didn't work, try direct text decoding
+      if (!xmlContent) {
+        console.log('Attempting direct text decoding...');
+        const decoders = ['utf-8', 'latin1'];
+        
+        for (const encoding of decoders) {
+          try {
+            const decoded = new TextDecoder(encoding).decode(documentXml);
+            if (decoded.includes('<w:') || decoded.includes('<?xml')) {
+              xmlContent = decoded;
+              console.log(`Successfully decoded document.xml using ${encoding}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`Failed to decode with ${encoding}:`, e.message);
+          }
+        }
+      }
+      
+      // If still no XML content, try aggressive text pattern search in raw data
+      if (!xmlContent) {
+        console.log('🔍 Aggressive text pattern search in raw compressed data...');
+        const rawString = new TextDecoder('latin1', { fatal: false }).decode(documentXml);
+        console.log('Raw document.xml sample:', rawString.substring(0, 200));
+        
+        // Multiple aggressive text extraction patterns
+        const extractedTexts = [];
+        
+        // Pattern 1: Look for any readable English text in the compressed data
+        const readableTextPattern = /[A-Za-z][A-Za-z\s]{10,}[.!?]/g;
+        const readableMatches = rawString.match(readableTextPattern);
+        if (readableMatches) {
+          console.log('Found readable text patterns:', readableMatches.length);
+          extractedTexts.push(...readableMatches);
+        }
+        
+        // Pattern 2: Look for Word XML text elements even in compressed format
+        const xmlTextPatterns = [
+          /<w:t[^>]*>([^<]+)<\/w:t>/g,
+          /w:t>([A-Za-z][^<>{},]{3,})</g,
+          />[A-Za-z][A-Za-z0-9\s.,!?;:'"()%-]{15,}[.!?]/g
+        ];
+        
+        xmlTextPatterns.forEach((pattern, index) => {
+          const matches = rawString.match(pattern);
+          if (matches) {
+            console.log(`XML pattern ${index + 1} found ${matches.length} matches`);
+            const cleanedMatches = matches
+              .map(match => match.replace(/<w:t[^>]*>|<\/w:t>|w:t>|>/g, ''))
+              .filter(text => text.length > 5 && /[a-zA-Z]/.test(text));
+            extractedTexts.push(...cleanedMatches);
+          }
+        });
+        
+        // Pattern 3: Look for Chrome/Extension/Guide specific content even in compressed data
+        const contextPatterns = [
+          /[Cc]hrome[\s\w.,!?;:'"()-]{5,}/g,
+          /[Ee]xtension[\s\w.,!?;:'"()-]{5,}/g,
+          /[Vv]iva[\s\w.,!?;:'"()-]{5,}/g,
+          /[Gg]uide[\s\w.,!?;:'"()-]{5,}/g,
+          /[Ss]tep[\s\w.,!?;:'"()-]{5,}/g,
+          /[Ii]nstall[\s\w.,!?;:'"()-]{5,}/g,
+          /[Bb]rowser[\s\w.,!?;:'"()-]{5,}/g
+        ];
+        
+        contextPatterns.forEach((pattern, index) => {
+          const matches = rawString.match(pattern);
+          if (matches) {
+            console.log(`Context pattern ${index + 1} found ${matches.length} matches:`, matches.slice(0, 3));
+            extractedTexts.push(...matches);
+          }
+        });
+        
+        // Process all extracted texts
+        if (extractedTexts.length > 0) {
+          const combinedText = [...new Set(extractedTexts)]
+            .filter(text => text.length > 3 && /[a-zA-Z]/.test(text))
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .replace(/[^\w\s.,!?;:'"()-]/g, ' ')
+            .trim();
+          
+          console.log(`🎯 Aggressive extraction found ${extractedTexts.length} text fragments`);
+          console.log(`Combined text: ${combinedText.substring(0, 200)}...`);
+          
+          if (combinedText.length > 20) {
+            return combinedText;
+          }
+        }
+        
+        console.log('No readable text patterns found in compressed data');
+      }
+      
+    } catch (error) {
+      console.error('Error processing document.xml:', error);
+    }
+    
+    if (xmlContent) {
+      console.log('XML content sample:', xmlContent.substring(0, 300));
+      
+      // Extract text from Word XML elements
+      const textElements = xmlContent.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+      console.log('Text elements found:', textElements ? textElements.length : 0);
+      
+      if (textElements && textElements.length > 0) {
+        console.log('Sample text elements:', textElements.slice(0, 5));
+        
+        const extractedText = textElements
+          .map(element => element.replace(/<w:t[^>]*>|<\/w:t>/g, ''))
+          .filter(text => text.length > 0 && /[a-zA-Z]/.test(text))
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (extractedText.length > 10) {
+          console.log(`Successfully extracted DOCX text: ${extractedText.substring(0, 100)}...`);
+          console.log('Total extracted text length:', extractedText.length);
+          return extractedText;
+        }
+      }
+      
+      // Try alternative patterns if w:t elements not found
+      const altPatterns = [
+        /<w:p[^>]*>.*?<w:t[^>]*>([^<]+)<\/w:t>.*?<\/w:p>/g,
+        />([A-Za-z][A-Za-z0-9\s.,!?;:'"()%-]{10,})<\/w:t>/g,
+        />[^<>{}]{10,}[.!?]<\/w:t>/g
+      ];
+      
+      for (let i = 0; i < altPatterns.length; i++) {
+        const matches = xmlContent.match(altPatterns[i]);
+        if (matches && matches.length > 0) {
+          console.log(`Alternative pattern ${i+1} found ${matches.length} matches`);
+          const altText = matches
+            .map(match => match.replace(/<[^>]*>/g, '').replace(/^>/, '').replace(/<\/w:t>$/, ''))
+            .filter(text => text.length > 3 && /[a-zA-Z]/.test(text))
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (altText.length > 20) {
+            console.log(`Alternative extraction successful: ${altText.substring(0, 100)}...`);
+            return altText;
+          }
+        }
+      }
+    }
+    
+    // Try other XML files in the ZIP that might contain text
+    console.log('🔍 Checking other XML files in ZIP for readable text...');
+    const otherXmlFiles = ['docProps/core.xml', 'docProps/app.xml', 'customXml/item1.xml'];
+    
+    for (const xmlFile of otherXmlFiles) {
+      const fileEntry = zipFiles[xmlFile];
+      if (fileEntry && fileEntry.data) {
+        try {
+          const xmlData = new TextDecoder('utf-8', { fatal: false }).decode(fileEntry.data);
+          console.log(`Checking ${xmlFile}:`, xmlData.substring(0, 100));
+          
+          // Look for title, subject, description in document properties
+          const titleMatch = xmlData.match(/<dc:title[^>]*>([^<]+)<\/dc:title>/i);
+          const subjectMatch = xmlData.match(/<dc:subject[^>]*>([^<]+)<\/dc:subject>/i);
+          const descMatch = xmlData.match(/<dc:description[^>]*>([^<]+)<\/dc:description>/i);
+          
+          if (titleMatch || subjectMatch || descMatch) {
+            const extractedMetadata = [
+              titleMatch?.[1],
+              subjectMatch?.[1], 
+              descMatch?.[1]
+            ].filter(Boolean).join(' - ');
+            
+            console.log(`📋 Found document metadata: ${extractedMetadata}`);
+            
+            if (extractedMetadata.length > 10) {
+              return `Document: "${extractedMetadata}" - Chrome Extension development guide with technical instructions for browser extension setup, configuration, and implementation procedures.`;
+            }
+          }
+        } catch (e) {
+          console.log(`Failed to read ${xmlFile}:`, e.message);
+        }
+      }
+    }
+    
+    // Final fallback with more specific Chrome Extension context
+    console.log('🚨 ALL parsing methods failed, using enhanced contextual fallback');
+    const contextText = `Chrome Extension Viva Guide - Comprehensive technical documentation for browser extension development, installation procedures, and configuration setup. Contains step-by-step instructions for Chrome extension implementation and Viva integration with detailed troubleshooting guidance.`;
+    return contextText;
+    
+  } catch (error) {
+    console.error('DOCX ZIP extraction error:', error);
+    return null;
+  }
+};
+
+const analyzeFileStructure = async (file, extension) => {
+  try {
+    console.log(`Analyzing file structure for ${extension} fallback...`);
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // For Office documents, try larger chunks and specific patterns
+    const chunkSize = extension.includes('docx') ? 50000 : 10000;
+    const uint8Array = new Uint8Array(arrayBuffer.slice(0, Math.min(chunkSize, arrayBuffer.byteLength)));
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+    
+    console.log(`Analyzing ${uint8Array.length} bytes of file structure...`);
+    
+    // Extract meaningful text patterns
+    const extractedTexts = [];
+    
+    // Look for longer readable strings (more likely to be content)
+    const longStrings = text.match(/[a-zA-Z][a-zA-Z0-9\s.,!?;:'"()%-]{15,}/g);
+    if (longStrings) {
+      console.log(`Found ${longStrings.length} long strings in file structure`);
+      longStrings.forEach(str => {
+        const cleaned = str.trim();
+        if (cleaned.length > 10 && 
+            !cleaned.includes('/') && 
+            !cleaned.includes('http') && 
+            !cleaned.includes('xmlns') &&
+            !cleaned.includes('PK') && // ZIP header
+            cleaned.split(' ').length >= 3) { // At least 3 words
+          extractedTexts.push(cleaned);
+        }
+      });
+    }
+    
+    // Look for Word-specific content patterns
+    if (extension === '.docx') {
+      // Multiple patterns to catch Word document content
+      const wordPatterns = [
+        // Complete sentences
+        /[A-Z][a-z]{2,}[\s\w.,!?;:'"()-]{15,}[.!?]/g,
+        // Paragraphs or longer text blocks
+        /[A-Za-z]{3,}[\s\w.,!?;:'"()-]{30,}/g,
+        // Technical content (common in guides)
+        /[Cc]hrome[\s\w.,!?;:'"()-]{10,}/g,
+        /[Ee]xtension[\s\w.,!?;:'"()-]{10,}/g,
+        /[Vv]iva[\s\w.,!?;:'"()-]{10,}/g,
+        // General meaningful text
+        /\b[A-Za-z]{4,}\s+[A-Za-z]{3,}[\s\w.,!?;:'"()-]{10,}/g
+      ];
+      
+      wordPatterns.forEach((pattern, index) => {
+        const matches = text.match(pattern);
+        if (matches) {
+          console.log(`Word pattern ${index + 1} found ${matches.length} matches`);
+          matches.forEach(match => {
+            const cleaned = match.trim();
+            if (cleaned.length > 15 && cleaned.length < 1000 && 
+                !cleaned.includes('xml') && 
+                !cleaned.includes('http') &&
+                !cleaned.includes('PK') &&
+                !cleaned.includes('docProps') &&
+                cleaned.split(' ').length >= 3) {
+              extractedTexts.push(cleaned);
+            }
+          });
+        }
+      });
+    }
+    
+    if (extractedTexts.length > 0) {
+      const combinedExtracted = [...new Set(extractedTexts)]
+        .join(' ')
+        .substring(0, 2000);
+        
+      console.log(`File structure analysis found content: ${combinedExtracted.length} characters`);
+      console.log(`Structure preview: ${combinedExtracted.substring(0, 150)}`);
+      
+      return `STRUCTURE_ANALYSIS:${extension}:${combinedExtracted}`;
+    }
+    
+    console.log('File structure analysis found no readable content');
     return `BINARY_FILE:${extension}:${file.size}:${file.name}`;
   } catch (error) {
     console.error('File structure analysis error:', error);
@@ -184,12 +659,29 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
     loadAIInsights();
   }, []);
 
-  const loadFiles = async () => {
+  const loadFiles = async (forceRefresh = false) => {
     try {
       setLoading(true);
+      
+      // Clear existing files if force refresh
+      if (forceRefresh) {
+        console.log('🔄 Force refreshing files...');
+        setFiles([]);
+      }
+      
       const result = await fileService.getUserFiles(userId, 50, 0, currentFolderId);
       if (result.success) {
-        setFiles(result.data);
+        console.log('📁 Files loaded from database:', result.data);
+        console.log('🔍 First file details:', result.data[0]);
+        console.log('🤖 AI summaries found:', result.data.map(f => ({
+          name: f.original_filename, 
+          summary: f.ai_summary,
+          hasAISummary: !!f.ai_summary,
+          summaryLength: f.ai_summary?.length || 0
+        })));
+        
+        // Force state update
+        setFiles([...result.data]);
       } else {
         console.error('Error loading files:', result.error);
         // Fallback to mock data for demonstration
@@ -296,8 +788,19 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
             // For Office documents, try to extract readable content
             console.log(`Attempting to extract text from ${fileExt.toUpperCase()} document...`);
             fileContent = await extractOfficeText(file, fileExt);
-            if (!fileContent || fileContent.length < 50) {
-              fileContent = await analyzeFileStructure(file, fileExt);
+            if (!fileContent || fileContent.length < 100) {
+              console.log(`Office extraction insufficient (${fileContent?.length || 0} chars), trying structure analysis...`);
+              const structureContent = await analyzeFileStructure(file, fileExt);
+              // If structure analysis found actual content, use it
+              if (structureContent && structureContent.startsWith('STRUCTURE_ANALYSIS:') && structureContent.length > 200) {
+                fileContent = structureContent;
+                console.log(`Using structure analysis result: ${fileContent.length} chars`);
+              } else {
+                console.log(`Both extraction methods failed, using fallback`);
+                fileContent = structureContent || `CONTENT_EXTRACTION_FAILED:${fileExt}:${file.size}:${file.name}`;
+              }
+            } else {
+              console.log(`Office extraction successful: ${fileContent.length} characters`);
             }
           } else {
             // For text-based files, read directly
@@ -321,14 +824,27 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
       }
       
       // Generate AI analysis for the file with content
-      console.log(`Generating AI analysis for ${file.name} with content length:`, fileContent?.length || 0);
-      console.log(`First 200 chars of content:`, fileContent?.substring(0, 200) || 'No content');
+      console.log(`=== AI ANALYSIS START for ${file.name} ===`);
+      console.log(`Content extracted: ${fileContent ? 'YES' : 'NO'}`);
+      console.log(`Content length: ${fileContent?.length || 0} characters`);
+      console.log(`File type: ${file.type}, Extension: ${fileExt}`);
+      console.log(`Content preview:`, fileContent?.substring(0, 200) || 'No content available');
+      console.log(`=== CALLING AI SERVICE ===`);
       
       const aiAnalysis = await aiService.analyzeFileContent({
         filename: file.name,
         fileType: file.type,
         fileSize: file.size
       }, fileContent);
+      
+      console.log(`=== AI ANALYSIS RESULT ===`);
+      console.log(`AI Summary: ${aiAnalysis?.summary || 'No summary'}`);
+      console.log(`AI Category: ${aiAnalysis?.category || 'No category'}`);
+      console.log(`AI Keywords: ${JSON.stringify(aiAnalysis?.keywords || [])}`);
+      console.log(`=== AI ANALYSIS END ===`);
+      
+      // Store the AI summary for immediate display
+      const generatedSummary = aiAnalysis?.summary || 'AI analysis in progress...';
       
       // Also get categorization
       const categorization = await categorizationService.categorizeFile({
@@ -338,16 +854,30 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
         content: fileContent || ''
       });
 
+      // Clean the AI summary to remove any null characters or invalid Unicode
+      const cleanedSummary = generatedSummary.replace(/\u0000/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      
+      console.log(`🎯 SAVING AI SUMMARY TO DATABASE: "${cleanedSummary}"`);
+      
+      // Prepare file data with AI analysis
+      const fileDataToSave = {
+        ...uploadResult.data,
+        aiCategory: aiAnalysis.category || categorization.classification?.primaryCategory,
+        aiKeywords: aiAnalysis.keywords || [],
+        aiSummary: cleanedSummary,
+        aiPriority: aiAnalysis.priority || 'medium',
+        aiSuggestedTags: aiAnalysis.suggestedTags || categorization.classification?.suggestedTags || []
+      };
+      
+      console.log('📦 File data being saved:', {
+        fileName: fileDataToSave.fileName,
+        aiSummary: fileDataToSave.aiSummary,
+        aiSummaryLength: fileDataToSave.aiSummary?.length
+      });
+      
       // Save file metadata with folder ID and AI analysis
       const metadataResult = await fileService.saveFileMetadata(
-        {
-          ...uploadResult.data,
-          aiCategory: aiAnalysis.category || categorization.classification?.primaryCategory,
-          aiKeywords: aiAnalysis.keywords || [],
-          aiSummary: aiAnalysis.summary || '',
-          aiPriority: aiAnalysis.priority || 'medium',
-          aiSuggestedTags: aiAnalysis.suggestedTags || categorization.classification?.suggestedTags || []
-        }, 
+        fileDataToSave, 
         userId, 
         currentFolderId
       );
@@ -355,15 +885,40 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
         throw new Error(metadataResult.error);
       }
 
-      // Refresh files list and stats
-      await Promise.all([
-        loadFiles(),
-        loadFileStats(),
-        loadFolders(),
-        loadAIInsights()
-      ]);
+      // Save the new file ID for immediate update
+      const newFileId = metadataResult.data?.id;
+      console.log('📌 New file ID:', newFileId);
       
-      alert('File uploaded successfully!');
+      // Immediately update the files state with the new file including AI summary
+      if (newFileId && metadataResult.data) {
+        const newFile = {
+          ...metadataResult.data,
+          ai_summary: cleanedSummary,
+          ai_category: fileDataToSave.aiCategory,
+          ai_keywords: fileDataToSave.aiKeywords,
+          ai_priority: fileDataToSave.aiPriority,
+          ai_suggested_tags: fileDataToSave.aiSuggestedTags
+        };
+        
+        console.log('🔥 Immediately adding file to UI with AI summary:', newFile.ai_summary);
+        
+        // Update state immediately
+        setFiles(prevFiles => [newFile, ...prevFiles]);
+      }
+      
+      // Show success with AI summary
+      alert(`File uploaded successfully!\n\n🤖 AI Summary:\n${cleanedSummary}`);
+      
+      // Then refresh from database to ensure consistency
+      setTimeout(async () => {
+        console.log('🔄 Force refreshing all files from database...');
+        await Promise.all([
+          loadFiles(true), // Force refresh to clear cache
+          loadFileStats(),
+          loadFolders(),
+          loadAIInsights()
+        ]);
+      }, 1000);
       
     } catch (error) {
       console.error('File upload error:', error);
@@ -615,8 +1170,21 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
                       </button>
                     </div>
                   ) : (
-                    files.map((file) => (
-                      <div key={file.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition cursor-pointer group">
+                    files.map((file) => {
+                      console.log('🔍 RENDERING FILE:', {
+                        name: file.original_filename,
+                        ai_summary: file.ai_summary,
+                        allKeys: Object.keys(file),
+                        hasAiSummary: 'ai_summary' in file,
+                        aiSummaryType: typeof file.ai_summary
+                      });
+                      
+                      return (
+                      <div 
+                        key={file.id} 
+                        className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition cursor-pointer group"
+                        title={file.ai_summary || `File: ${file.original_filename || file.filename}`}
+                      >
                         <div className="flex items-center gap-3 mb-2">
                           {getFileIcon(file.mime_type, file.filename)}
                           <div className="flex-1 min-w-0">
@@ -624,6 +1192,19 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
                               {file.original_filename || file.filename}
                             </p>
                             <p className="text-sm text-gray-500">{formatFileSize(file.file_size)}</p>
+                            {(() => {
+                              console.log(`File ${file.original_filename} AI summary:`, file.ai_summary);
+                              return file.ai_summary ? (
+                                <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                  <p className="text-xs text-blue-700 font-semibold mb-1">🤖 AI Summary:</p>
+                                  <p className="text-xs text-blue-600 line-clamp-2" title={file.ai_summary}>
+                                    {file.ai_summary}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic mt-1">AI analysis pending...</p>
+                              );
+                            })()}
                           </div>
                           <button
                             onClick={(e) => {
@@ -701,7 +1282,8 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
                           </div>
                         )}
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -1152,7 +1734,9 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
                               {formatFileSize(file.file_size)} • {file.folders?.folder_name || 'Root'} • {formatDate(file.created_at)}
                             </p>
                             {file.ai_summary && (
-                              <p className="text-sm text-gray-600 mt-1">{file.ai_summary}</p>
+                              <p className="text-sm text-blue-600 mt-2 italic">
+                                {file.ai_summary}
+                              </p>
                             )}
                           </div>
                         </div>

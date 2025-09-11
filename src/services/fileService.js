@@ -44,31 +44,68 @@ export const fileService = {
         return { success: false, error: 'User ID is required to save files' };
       }
       
+      console.log('💾 Saving file metadata with AI summary:', {
+        fileName: fileData.fileName,
+        aiSummary: fileData.aiSummary,
+        aiCategory: fileData.aiCategory,
+        userId: userId
+      });
+      
+      const insertData = {
+        user_id: userId,
+        filename: fileData.fileName,
+        original_filename: fileData.fileName,
+        file_path: fileData.path,
+        file_url: fileData.url,
+        file_size: fileData.fileSize,
+        file_type: fileData.fileType,
+        mime_type: fileData.fileType,
+        folder_id: folderId,
+        folder_path: fileData.folderPath || null,
+        upload_status: 'completed',
+        ai_category: fileData.aiCategory || null,
+        ai_keywords: fileData.aiKeywords || null,
+        ai_summary: fileData.aiSummary || null,
+        ai_priority: fileData.aiPriority || null,
+        ai_suggested_tags: fileData.aiSuggestedTags || null
+      };
+      
+      console.log('🔄 About to insert into database:', {
+        filename: insertData.filename,
+        ai_summary: insertData.ai_summary
+      });
+      
       const { data, error } = await supabase
         .from('files')
-        .insert({
-          user_id: userId,
-          filename: fileData.fileName,
-          original_filename: fileData.fileName,
-          file_path: fileData.path,
-          file_url: fileData.url,
-          file_size: fileData.fileSize,
-          file_type: fileData.fileType,
-          mime_type: fileData.fileType,
-          folder_id: folderId,
-          folder_path: fileData.folderPath || null,
-          upload_status: 'completed',
-          ai_category: fileData.aiCategory || null,
-          ai_keywords: fileData.aiKeywords || null,
-          ai_summary: fileData.aiSummary || null,
-          ai_priority: fileData.aiPriority || null,
-          ai_suggested_tags: fileData.aiSuggestedTags || null
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
-
+      
+      console.log('✅ File saved successfully with AI summary:', data.ai_summary);
+      console.log('📋 Complete saved file object:', data);
+      
+      // IMMEDIATE FIX: If the returned AI summary is wrong, update it manually
+      if (data.ai_summary !== fileData.aiSummary && fileData.aiSummary) {
+        console.log('🚨 AI SUMMARY WAS OVERWRITTEN! Fixing manually...');
+        console.log('Expected:', fileData.aiSummary);
+        console.log('Got:', data.ai_summary);
+        
+        // Force update the AI summary
+        const { data: fixedData, error: fixError } = await supabase
+          .from('files')
+          .update({ ai_summary: fileData.aiSummary })
+          .eq('id', data.id)
+          .select()
+          .single();
+          
+        if (!fixError && fixedData) {
+          console.log('✅ AI Summary fixed:', fixedData.ai_summary);
+          return { success: true, data: fixedData };
+        }
+      }
+      
       return { success: true, data };
     } catch (error) {
       console.error('File metadata save error:', error);
@@ -111,6 +148,15 @@ export const fileService = {
       const { data, error } = await query;
 
       if (error) throw error;
+      
+      console.log('📂 Retrieved files from database:', data?.length || 0, 'files');
+      if (data && data.length > 0) {
+        console.log('🔍 First file AI data:', {
+          filename: data[0].original_filename,
+          ai_summary: data[0].ai_summary,
+          ai_category: data[0].ai_category
+        });
+      }
 
       return { success: true, data };
     } catch (error) {

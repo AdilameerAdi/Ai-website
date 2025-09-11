@@ -145,26 +145,77 @@ export default function UserDashboard({ user, onLogout, navigate }) {
   };
 
   const handlePasswordChange = async () => {
-    if (settingsForm.newPassword !== settingsForm.confirmPassword) {
-      alert('Passwords do not match!');
+    // Validate required fields are filled
+    if (!settingsForm.newPassword || !settingsForm.confirmPassword) {
+      alert('Please fill in the new password and confirmation fields!');
       return;
     }
 
+    // Validate new password and confirm password match
+    if (settingsForm.newPassword !== settingsForm.confirmPassword) {
+      alert('New passwords do not match!');
+      return;
+    }
+
+    // Validate new password length
     if (settingsForm.newPassword.length < 6) {
-      alert('Password must be at least 6 characters long!');
+      alert('New password must be at least 6 characters long!');
+      return;
+    }
+
+    // Validate current password is different from new password (if current password is provided)
+    if (settingsForm.currentPassword && settingsForm.currentPassword === settingsForm.newPassword) {
+      alert('New password must be different from current password!');
       return;
     }
 
     setSettingsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Since Supabase doesn't have a direct "verify current password" method,
+      // we'll rely on the updateUser method which requires a valid session
+      // If the session is invalid, it will fail appropriately
+      
+      const { error: updateError } = await supabase.auth.updateUser({
         password: settingsForm.newPassword
       });
 
-      if (error) throw error;
+      if (updateError) {
+        // Handle specific error cases
+        if (updateError.message.includes('Invalid refresh token') || 
+            updateError.message.includes('session') || 
+            updateError.status === 401) {
+          alert('Your session has expired. Please log out and log back in to change your password.');
+        } else if (updateError.message.includes('Password')) {
+          alert('Failed to update password. Please check your current password and try again.');
+        } else {
+          alert('Failed to update password: ' + updateError.message);
+        }
+        throw updateError;
+      }
 
-      setSettingsForm({ ...settingsForm, currentPassword: '', newPassword: '', confirmPassword: '' });
-      alert('Password updated successfully!');
+      // Clear the form
+      setSettingsForm({ 
+        ...settingsForm, 
+        currentPassword: '', 
+        newPassword: '', 
+        confirmPassword: '' 
+      });
+
+      // Show success message
+      alert('Password updated successfully! You will be logged out and need to login with your new password.');
+
+      // Wait a moment for user to read the message, then logout
+      setTimeout(async () => {
+        try {
+          await supabase.auth.signOut();
+          onLogout(); // Call the logout callback to redirect to login
+        } catch (logoutError) {
+          console.error('Logout error:', logoutError);
+          // Force logout even if there's an error
+          onLogout();
+        }
+      }, 2000);
+
     } catch (error) {
       console.error('Password update error:', error);
       alert('Failed to update password. Please try again.');
@@ -771,7 +822,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                     <h3 className="text-lg font-semibold text-gray-700 mb-4">Change Password</h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Password <span className="text-gray-500">(optional for verification)</span></label>
                         <div className="relative">
                           <input
                             type={showPassword ? "text" : "password"}
@@ -790,7 +841,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password *</label>
                         <input
                           type={showPassword ? "text" : "password"}
                           value={settingsForm.newPassword}
@@ -800,7 +851,7 @@ export default function UserDashboard({ user, onLogout, navigate }) {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password *</label>
                         <input
                           type={showPassword ? "text" : "password"}
                           value={settingsForm.confirmPassword}
