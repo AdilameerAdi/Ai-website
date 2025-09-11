@@ -47,86 +47,211 @@ export default function Footer() {
   // Modal content
   const modalContent = {
     privacy: {
-      title: "Privacy Policy",
-      body: (
-        <>
-          <p><strong>Effective Date:</strong> September 2025</p>
-          <p><strong>Company:</strong> Conseccomms Pvt Ltd (“we,” “our,” “us”)</p>
-          <h3 className="font-semibold mt-4">Introduction</h3>
-          <p>
-            Conseccomms is committed to protecting your privacy. This Privacy Policy
-            explains how we collect, use, and safeguard your information when you
-            use our services, including ConsecDesk, ConsecDrive, and ConsecQuote.
-          </p>
-          <h3 className="font-semibold mt-4">Information We Collect</h3>
-          <ul className="list-disc ml-6">
-            <li>Account Information: Name, email, company details.</li>
-            <li>Usage Data: Login activity, files uploaded, proposals created.</li>
-            <li>Feedback & Interest Data: Demo requests, pricing interest, feedback.</li>
-            <li>Technical Data: Browser type, device, IP address.</li>
-          </ul>
-          <h3 className="font-semibold mt-4">User Rights</h3>
-          <p>
-            You can request access, correction, or deletion of your data by emailing:
-            <strong> support@conseccomms.com</strong>
-          </p>
-        </>
-      ),
-    },
-    terms: {
-      title: "Terms of Service",
-      body: (
-        <>
-          <p><strong>Effective Date:</strong> September 2025</p>
-          <p><strong>Company:</strong> Conseccomms Pvt Ltd</p>
-          <h3 className="font-semibold mt-4">Acceptance of Terms</h3>
-          <p>
-            By signing up or using Conseccomms services (ConsecDesk, ConsecDrive,
-            ConsecQuote), you agree to these Terms of Service.
-          </p>
-          <h3 className="font-semibold mt-4">Subscription & Payments</h3>
-          <p>
-            Pricing plans include Free, Growth, Business, Pro, and Enterprise.
-            Paid plans are billed monthly or annually.
-          </p>
-          <h3 className="font-semibold mt-4">Limitation of Liability</h3>
-          <p>
-            Conseccomms is provided “as is.” We are not liable for indirect damages,
-            data loss, or AI misinterpretations.
-          </p>
-          <p className="mt-2">
-            For support: <strong>support@conseccomms.com</strong>
-          </p>
-        </>
-      ),
-    },
+  title: "Privacy Policy",
+  body: (
+    <>
+      <p><strong>Effective Date:</strong> September 2025</p>
+      <p><strong>Company:</strong> Conseccomms Pvt Ltd (“we,” “our,” “us”)</p>
+
+      <h3 className="font-semibold mt-4">1. Introduction</h3>
+      <p>
+        Conseccomms is committed to protecting your privacy. This Privacy Policy
+        explains how we collect, use, and safeguard your information when you
+        use our services, including ConsecDesk, ConsecDrive, and ConsecQuote.
+      </p>
+
+      <h3 className="font-semibold mt-4">2. Information We Collect</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li><strong>Account Information:</strong> Name, email, company details.</li>
+        <li><strong>Usage Data:</strong> Login activity, files uploaded, proposals created.</li>
+        <li><strong>Feedback & Interest Data:</strong> Demo requests, pricing interest, roadmap notifications, feedback form submissions.</li>
+        <li><strong>Technical Data:</strong> Browser type, device, IP address.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">3. How We Use Your Data</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>To provide access to ConsecDesk, ConsecDrive, and ConsecQuote.</li>
+        <li>To improve user experience through ConsecIQ AI features (e.g., smart replies, tagging, proposals).</li>
+        <li>To notify you about new features and roadmap updates.</li>
+        <li>To maintain system security and compliance.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">4. Data Sharing</h3>
+      <p>We do not sell your data. Information may only be shared with:</p>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Cloud hosting partners (Google Cloud, Firebase).</li>
+        <li>Legal or regulatory authorities when required by law.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">5. Data Retention</h3>
+      <p>
+        We retain data as long as your account is active or as required for
+        legal/compliance purposes.
+      </p>
+
+      <h3 className="font-semibold mt-4">6. Security</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Data is encrypted at rest and in transit.</li>
+        <li>Access is role-based and monitored.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">7. User Rights</h3>
+      <p>You can request to:</p>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Access or download your data.</li>
+        <li>Correct inaccurate details.</li>
+        <li>Delete your account (subject to compliance needs).</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">8. Contact Us</h3>
+      <p>
+        For questions, contact us at:{" "}
+        <strong>support@conseccomms.com</strong>
+      </p>
+    </>
+  ),
+},
+
+   terms: {
+  title: "Terms of Service",
+  body: (
+    <>
+      <p><strong>Effective Date:</strong> September 2025</p>
+      <p><strong>Company:</strong> Conseccomms Pvt Ltd</p>
+
+      <h3 className="font-semibold mt-4">1. Acceptance of Terms</h3>
+      <p>
+        By signing up or using Conseccomms services (ConsecDesk, ConsecDrive,
+        ConsecQuote), you agree to these Terms of Service.
+      </p>
+
+      <h3 className="font-semibold mt-4">2. Services Provided</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Access to SaaS apps: ConsecDesk, ConsecDrive, ConsecQuote.</li>
+        <li>
+          Roadmap apps (e.g., ConsecMeet, ConsecMail, etc.) are Coming Soon and
+          may change.
+        </li>
+        <li>AI features are powered by ConsecIQ.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">3. Accounts & Access</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Users must provide accurate information during signup.</li>
+        <li>
+          Free users receive basic access; paid tiers provide additional
+          features.
+        </li>
+        <li>You are responsible for safeguarding login credentials.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">4. Subscription & Payments</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Pricing plans: Free, Growth, Business, Pro, Enterprise.</li>
+        <li>Paid plans are billed monthly or annually.</li>
+        <li>Enterprise contracts may include custom pricing.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">5. Acceptable Use</h3>
+      <p>You agree not to:</p>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Upload harmful, illegal, or infringing content.</li>
+        <li>Misuse AI features for fraudulent or abusive purposes.</li>
+        <li>Attempt unauthorized access to the system.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">6. Intellectual Property</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>Conseccomms and ConsecIQ are proprietary technologies.</li>
+        <li>You retain ownership of your uploaded files and created proposals.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">7. AI Disclaimer</h3>
+      <p>
+        ConsecIQ provides AI-based suggestions, summaries, and insights. These
+        outputs are recommendations only and not guaranteed to be error-free.
+      </p>
+
+      <h3 className="font-semibold mt-4">8. Termination</h3>
+      <ul className="list-disc ml-6 space-y-1">
+        <li>We may suspend accounts violating these Terms.</li>
+        <li>
+          Users may cancel anytime; refunds are governed by applicable law.
+        </li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">9. Limitation of Liability</h3>
+      <p>
+        Conseccomms is provided “as is.” We are not liable for indirect damages,
+        data loss, or AI misinterpretations.
+      </p>
+
+      <h3 className="font-semibold mt-4">10. Governing Law</h3>
+      <p>
+        These Terms are governed by the laws of India, and disputes will fall
+        under the jurisdiction of Mumbai courts.
+      </p>
+
+      <h3 className="font-semibold mt-4">11. Contact Us</h3>
+      <p>
+        For support, email: <strong>support@conseccomms.com</strong>
+      </p>
+    </>
+  ),
+},
     refund: {
-      title: "Refund & Cancellation Policy",
-      body: (
-        <>
-          <p><strong>Effective Date:</strong> September 2025</p>
-          <p><strong>Company:</strong> Conseccomms Pvt Ltd</p>
-          <h3 className="font-semibold mt-4">Refunds</h3>
-          <p>
-            Monthly subscriptions are non-refundable. Annual subscriptions may be
-            refunded pro-rata if service downtime exceeds 15 consecutive days or
-            if a billing error occurs.
-          </p>
-          <h3 className="font-semibold mt-4">Cancellations</h3>
-          <p>
-            You may cancel anytime via account settings. Access remains until the
-            end of the billing cycle. No partial refunds.
-          </p>
-          <h3 className="font-semibold mt-4">Enterprise Contracts</h3>
-          <p>
-            Refund & cancellation terms are defined in the signed enterprise contract.
-          </p>
-          <p className="mt-2">
-            For requests: <strong>support@conseccomms.com</strong>
-          </p>
-        </>
-      ),
-    },
+  title: "Refund & Cancellation Policy",
+  body: (
+    <>
+      <p><strong>Effective Date:</strong> September 2025</p>
+      <p><strong>Company:</strong> Conseccomms Pvt Ltd (“we,” “our,” “us”)</p>
+
+      <h3 className="font-semibold mt-4">1. Free Plan</h3>
+      <p>
+        Our Start Free plan allows users to explore ConsecDesk, ConsecDrive, and ConsecQuote at no cost.
+        Since it is free, it is not eligible for refunds.
+      </p>
+
+      <h3 className="font-semibold mt-4">2. Paid Subscriptions</h3>
+      <p>
+        Conseccomms offers Growth, Business, Pro, and Enterprise subscription plans.
+        Subscriptions are billed monthly or annually depending on your chosen plan.
+      </p>
+
+      <h3 className="font-semibold mt-4">3. Refunds</h3>
+      <p>
+        We do not provide refunds for monthly subscriptions once billed.
+      </p>
+      <p>
+        For annual subscriptions, refunds may be issued on a pro-rata basis only if:
+      </p>
+      <ul className="list-disc list-inside ml-4">
+        <li>Service downtime exceeds 15 consecutive days.</li>
+        <li>A billing error has occurred.</li>
+      </ul>
+
+      <h3 className="font-semibold mt-4">4. Cancellations</h3>
+      <p>
+        You may cancel your subscription at any time via the Billing/Account settings.
+        Once cancelled, you will retain access to the service until the end of your current billing cycle.
+        No partial refunds are issued for cancellations during an active billing cycle.
+      </p>
+
+      <h3 className="font-semibold mt-4">5. Enterprise Contracts</h3>
+      <p>
+        Enterprise plans operate under custom agreements.
+        Refund and cancellation terms are defined in the contract signed with the client.
+      </p>
+
+      <h3 className="font-semibold mt-4">6. Contact Us</h3>
+      <p>
+        For refund or cancellation requests, email us at{" "}
+        <strong>support@conseccomms.com</strong>
+      </p>
+    </>
+  ),
+},
+
   };
 
   return (

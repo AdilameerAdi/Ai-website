@@ -654,7 +654,7 @@ export default function ConsecDrive({ user, navigate, onLogout, hideBottomNav = 
                                 <FaBrain className="text-blue-600 text-xs" />
                                 <span className="text-xs font-semibold text-gray-700">AI Summary</span>
                               </div>
-                              <p className="text-xs text-gray-600 line-clamp-2">{file.ai_summary}</p>
+                              <p className="text-xs text-gray-600 ">{file.ai_summary}</p>
                             </div>
                             
                             {/* AI Tags */}

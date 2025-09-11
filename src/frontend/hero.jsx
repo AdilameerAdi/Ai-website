@@ -1,6 +1,6 @@
 import { useState } from "react";
 import DemoModal from "../components/DemoModal.jsx";
-import { ResponsiveButton } from '../components/ResponsiveLayout';
+import { ResponsiveButton } from "../components/ResponsiveLayout";
 
 export default function Hero({ setIsAuthModalOpen }) {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
@@ -8,49 +8,56 @@ export default function Hero({ setIsAuthModalOpen }) {
   return (
     <section
       id="home"
-      className="relative bg-[#1C94B5] pt-20 sm:pt-24 lg:pt-18 pb-12 sm:pb-16 lg:pb-20"
+      className="relative bg-[#E7F1F7] pt-20 sm:pt-24 lg:pt-28 pb-16 sm:pb-20 lg:pb-28"
     >
       <div className="responsive-container">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-12">
-          
-          {/* Left Content */}
-          <div className="flex-1 text-center lg:text-left">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-800 leading-tight">
-              Inspiring Brilliance, <br />
-              <span className="text-black">Streaming to Digital Horizons</span>
-            </h1>
-            <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-gray-700 max-w-2xl mx-auto lg:mx-0">
-              An AI-driven digital ecosystem for SMEs, powered by{" "}
-              <span className="font-semibold text-gray-700 ">ConsecIQ</span>. Manage client
-              interactions, secure file storage, and proposals — all in one
-              intelligent platform.
-            </p>
+        <div className="max-w-5xl mx-auto px-6 sm:px-8 text-center">
+          {/* Heading */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight text-gray-900">
+            Inspiring Brilliance,
+            <br />
+            <span className="text-[#187a97]">
+              Streaming to Digital Horizons
+            </span>
+          </h1>
 
-            {/* Buttons */}
-            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
-              <ResponsiveButton 
-                onClick={() => setIsAuthModalOpen(true)}
-                variant="outline"
-                size="large"
-               className="bg-lightgreen hover:bg-[#187a97] text-white"
+          {/* Sub Text */}
+          <p className="mt-6 sm:mt-8 text-lg sm:text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+            Welcome to{" "}
+            <span className="font-semibold text-[#187a97]">ConsecIQ</span> — an
+            AI-driven digital ecosystem for SMEs.  
+            Simplify client interactions, secure your data, and manage proposals
+            — all in one smart platform designed to accelerate your digital
+            journey.
+          </p>
 
-              >
-                Login
-              </ResponsiveButton>
-            </div>
-          </div>
+          {/* Buttons */}
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <ResponsiveButton
+              onClick={() => setIsAuthModalOpen(true)}
+              variant="solid"
+              size="large"
+              className="bg-[#187a97] hover:bg-[#136a7d] text-white shadow-lg rounded-xl px-7 py-3 font-semibold transition-all"
+            >
+              Login
+            </ResponsiveButton>
 
-          {/* Right Image / Illustration */}
-          <div className="flex-1 flex justify-center lg:justify-end mt-8 lg:mt-0">
-           
+            <ResponsiveButton
+              onClick={() => setIsDemoModalOpen(true)}
+              variant="outline"
+              size="large"
+              className="border border-[#187a97] text-[#187a97] hover:bg-[#e4f1f8] rounded-xl px-7 py-3 font-semibold transition-all"
+            >
+              Request Demo
+            </ResponsiveButton>
           </div>
         </div>
       </div>
 
       {/* Demo Modal */}
-      <DemoModal 
-        isOpen={isDemoModalOpen} 
-        onClose={() => setIsDemoModalOpen(false)} 
+      <DemoModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
       />
     </section>
   );
