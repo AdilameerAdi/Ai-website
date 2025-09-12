@@ -266,8 +266,8 @@ export const apiService = {
         return { success: false, error: 'No account found with this email address.' };
       }
 
-      // Generate reset token (in production, use crypto.randomBytes)
-      const resetToken = Math.random().toString(36).substr(2) + Date.now().toString(36);
+      // Generate 6-digit numeric reset token
+      const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
 
       // Store reset token in database
@@ -282,10 +282,39 @@ export const apiService = {
 
       if (tokenError) throw tokenError;
 
-      // In a real application, you would send an email here
-      console.log(`Password reset requested for ${email}. Reset token: ${resetToken}`);
-      
-      return { success: true, message: 'Password reset instructions sent to your email.' };
+      // Send email with reset token using EmailJS
+      try {
+        const emailjs = await import('@emailjs/browser');
+        
+        const templateParams = {
+          client_name: user.full_name || user.first_name || 'User',
+          client_email: email,
+          proposal_title: 'Password Reset Request',
+          proposal_description: `Your password reset token is: ${resetToken}\n\nThis token expires in 15 minutes.\n\nIf you didn't request this password reset, please ignore this email.\n\nFor security reasons, please do not share this token with anyone.`,
+          total_amount: 'N/A'
+        };
+
+        await emailjs.default.send(
+          'service_oo9s9ua',   // Same service ID used for proposals
+          'template_cetj34p',  // Use existing proposal template
+          templateParams,
+          'ClG1MDqYkhkan8_0p'  // Same public key
+        );
+        
+        console.log(`Password reset email sent successfully to ${email}`);
+        return { 
+          success: true, 
+          message: 'Password reset instructions have been sent to your email address.' 
+        };
+      } catch (emailError) {
+        console.error('Failed to send reset email:', emailError);
+        // Fallback: still log the token if email fails, but don't tell user it failed
+        console.log(`Email failed. Reset token for ${email}: ${resetToken}`);
+        return { 
+          success: true, 
+          message: 'If an account with that email exists, you will receive password reset instructions. For demo purposes, check the console for the reset token.' 
+        };
+      }
     } catch (error) {
       console.error('Error requesting password reset:', error);
       return { success: false, error: error.message };

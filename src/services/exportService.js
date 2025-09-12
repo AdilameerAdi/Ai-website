@@ -21,19 +21,35 @@ export const exportService = {
       doc.setFont(undefined, 'bold');
       doc.text('Project:', 20, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(proposal.project || 'N/A', 60, yPos);
+      doc.text(proposal.title || proposal.project || 'N/A', 60, yPos);
       yPos += lineHeight;
 
       doc.setFont(undefined, 'bold');
       doc.text('Client:', 20, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(proposal.client || 'N/A', 60, yPos);
+      doc.text(proposal.client_name || proposal.client || 'N/A', 60, yPos);
+      yPos += lineHeight;
+
+      doc.setFont(undefined, 'bold');
+      doc.text('Email:', 20, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(proposal.client_email || 'N/A', 60, yPos);
+      yPos += lineHeight;
+
+      doc.setFont(undefined, 'bold');
+      doc.text('Company:', 20, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(proposal.client_company || 'N/A', 60, yPos);
       yPos += lineHeight;
 
       doc.setFont(undefined, 'bold');
       doc.text('Value:', 20, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(proposal.value || 'N/A', 60, yPos);
+      const totalAmount = proposal.total_amount || proposal.value || 0;
+      const taxPercentage = proposal.tax_percentage || 0;
+      const tax = (totalAmount * taxPercentage) / 100;
+      const totalWithTax = totalAmount + tax;
+      doc.text(`$${totalWithTax.toLocaleString()}`, 60, yPos);
       yPos += lineHeight;
 
       doc.setFont(undefined, 'bold');
@@ -43,9 +59,15 @@ export const exportService = {
       yPos += lineHeight;
 
       doc.setFont(undefined, 'bold');
+      doc.text('Valid Until:', 20, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString() : 'N/A', 60, yPos);
+      yPos += lineHeight;
+
+      doc.setFont(undefined, 'bold');
       doc.text('Created:', 20, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(proposal.created || proposal.date || 'N/A', 60, yPos);
+      doc.text(proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : proposal.created || proposal.date || 'N/A', 60, yPos);
       yPos += lineHeight * 2;
 
       // Description/Content
@@ -64,26 +86,111 @@ export const exportService = {
         yPos += lineHeight;
       }
 
+      // Line Items
+      if (proposal.proposal_line_items && proposal.proposal_line_items.length > 0) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Line Items:', 20, yPos);
+        yPos += lineHeight;
+        
+        // Table headers
+        doc.setFont(undefined, 'bold');
+        doc.text('Description', 20, yPos);
+        doc.text('Qty', 120, yPos);
+        doc.text('Rate', 140, yPos);
+        doc.text('Total', 170, yPos);
+        yPos += lineHeight;
+        
+        // Line under headers
+        doc.line(20, yPos - 2, 190, yPos - 2);
+        yPos += 2;
+        
+        doc.setFont(undefined, 'normal');
+        proposal.proposal_line_items.forEach(item => {
+          const itemName = item.item_name || item.name || '';
+          const itemQuantity = item.quantity || 1;
+          const itemRate = item.unit_price || item.rate || item.unitPrice || 0;
+          const itemTotal = item.total_price || item.total || (itemQuantity * itemRate);
+          
+          doc.text(doc.splitTextToSize(itemName, 95)[0] || '', 20, yPos);
+          doc.text(itemQuantity.toString(), 120, yPos);
+          doc.text(`$${parseFloat(itemRate).toFixed(2)}`, 140, yPos);
+          doc.text(`$${parseFloat(itemTotal).toFixed(2)}`, 170, yPos);
+          yPos += lineHeight;
+        });
+        
+        // Subtotal, Tax, and Total
+        yPos += lineHeight;
+        doc.line(20, yPos - 2, 190, yPos - 2);
+        
+        const subtotal = proposal.total_amount || 0;
+        const taxPercentage = proposal.tax_percentage || 0;
+        const tax = (subtotal * taxPercentage) / 100;
+        const finalTotal = subtotal + tax;
+        
+        doc.text('Subtotal:', 140, yPos);
+        doc.text(`$${subtotal.toFixed(2)}`, 170, yPos);
+        yPos += lineHeight;
+        
+        doc.text(`Tax (${taxPercentage}%):`, 140, yPos);
+        doc.text(`$${tax.toFixed(2)}`, 170, yPos);
+        yPos += lineHeight;
+        
+        doc.setFont(undefined, 'bold');
+        doc.text('Total:', 140, yPos);
+        doc.text(`$${finalTotal.toFixed(2)}`, 170, yPos);
+        yPos += lineHeight * 2;
+      }
+
+      // Terms & Conditions
+      if (proposal.terms_conditions) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Terms & Conditions:', 20, yPos);
+        yPos += lineHeight;
+        
+        doc.setFont(undefined, 'normal');
+        const termsLines = doc.splitTextToSize(proposal.terms_conditions, 170);
+        termsLines.forEach(line => {
+          doc.text(line, 20, yPos);
+          yPos += lineHeight;
+        });
+        yPos += lineHeight;
+      }
+
       // AI Insights if available
-      if (proposal.aiAnalysis) {
+      if (proposal.aiAnalysis || proposal.ai_win_probability) {
         doc.setFont(undefined, 'bold');
         doc.text('AI Analysis:', 20, yPos);
         yPos += lineHeight;
 
         doc.setFont(undefined, 'normal');
-        if (proposal.aiAnalysis.winProbability) {
-          doc.text(`Win Probability: ${proposal.aiAnalysis.winProbability}%`, 20, yPos);
+        const winProbability = proposal.ai_win_probability || proposal.aiAnalysis?.winProbability;
+        const suggestedPricing = proposal.ai_suggested_price || proposal.aiAnalysis?.suggestedPricing;
+        const marketAnalysis = proposal.ai_market_analysis || proposal.aiAnalysis?.marketAnalysis;
+        const recommendations = proposal.ai_recommendations || proposal.aiAnalysis?.recommendations;
+        
+        if (winProbability) {
+          doc.text(`Win Probability: ${winProbability}%`, 20, yPos);
           yPos += lineHeight;
         }
-        if (proposal.aiAnalysis.suggestedPricing) {
-          doc.text(`Suggested Pricing: $${proposal.aiAnalysis.suggestedPricing.toLocaleString()}`, 20, yPos);
+        if (suggestedPricing) {
+          doc.text(`Suggested Pricing: $${suggestedPricing.toLocaleString()}`, 20, yPos);
           yPos += lineHeight;
         }
-        if (proposal.aiAnalysis.marketAnalysis) {
+        if (marketAnalysis) {
           doc.text('Market Analysis:', 20, yPos);
           yPos += lineHeight;
-          const marketLines = doc.splitTextToSize(proposal.aiAnalysis.marketAnalysis, 170);
+          const marketLines = doc.splitTextToSize(marketAnalysis, 170);
           marketLines.forEach(line => {
+            doc.text(line, 20, yPos);
+            yPos += lineHeight;
+          });
+          yPos += lineHeight;
+        }
+        if (recommendations) {
+          doc.text('Recommendations:', 20, yPos);
+          yPos += lineHeight;
+          const recLines = doc.splitTextToSize(recommendations, 170);
+          recLines.forEach(line => {
             doc.text(line, 20, yPos);
             yPos += lineHeight;
           });
@@ -97,7 +204,8 @@ export const exportService = {
       doc.text(new Date().toLocaleDateString(), 20, pageHeight - 15);
 
       // Save the PDF
-      const fileName = `proposal-${proposal.project?.replace(/\s+/g, '-') || 'export'}-${new Date().getTime()}.pdf`;
+      const proposalTitle = proposal.title || proposal.project || 'proposal';
+      const fileName = `proposal-${proposalTitle.replace(/\s+/g, '-')}-${new Date().getTime()}.pdf`;
       doc.save(fileName);
 
       return { success: true, fileName };

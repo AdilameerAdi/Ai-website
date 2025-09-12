@@ -189,7 +189,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }) 
                   className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 focus:outline-none focus:ring-2 focus:ring-[#14B8A6] text-sm sm:text-base min-h-[44px]"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Note: For demo purposes, check the browser console for the reset token.
+                  If you don't receive an email, please check your spam folder.
                 </p>
               </div>
 
