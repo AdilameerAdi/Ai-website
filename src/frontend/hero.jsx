@@ -46,7 +46,7 @@ export default function Hero({ setIsAuthModalOpen }) {
               onClick={() => setIsDemoModalOpen(true)}
               variant="outline"
               size="large"
-              className="border border-[#187a97] text-[#187a97] hover:bg-[#e4f1f8] rounded-xl px-7 py-3 font-semibold transition-all"
+              className="border border-[#187a97] text-[#187a97] hover:bg-[#187A97] hover:text-white rounded-xl px-7 py-3 font-semibold transition-all"
             >
               Request Demo
             </ResponsiveButton>

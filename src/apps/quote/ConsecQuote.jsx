@@ -4,6 +4,7 @@ import AppLayout from '../shared/AppLayout';
 import { apiService } from '../../services/api.js';
 import { exportService } from '../../services/exportService.js';
 import { quoteService } from '../../services/quoteService.js';
+import emailjs from '@emailjs/browser';
 
 export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = false }) {
   // Use actual user ID for proper data isolation
@@ -502,6 +503,37 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
     { id: 'proposals', label: 'All Proposals', icon: <FaFileAlt /> },
     { id: 'analytics', label: 'Analytics', icon: <FaChartBar /> }
   ];
+const sendEmailToClient = () => {
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)),
+    0
+  );
+  const tax = (subtotal * parseFloat(formData.taxPercentage || 0)) / 100;
+  const totalAmount = subtotal + tax;
+
+  const templateParams = {
+    client_name: formData.clientName,
+    client_email: formData.clientEmail,
+    proposal_title: formData.title,
+    proposal_description: formData.description,
+    total_amount: totalAmount.toFixed(2),
+  };
+
+  emailjs.send(
+    'service_oo9s9ua',   // your Service ID
+    'template_cetj34p',  // your Template ID
+    templateParams,
+    'ClG1MDqYkhkan8_0p'  // your EmailJS Public Key as a string
+)
+
+  .then(() => {
+    alert('Email sent successfully!');
+  })
+  .catch((err) => {
+    console.error(err);
+    alert('Failed to send email.');
+  });
+};
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -672,6 +704,7 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
             </div>
           </div>
         );
+        
 
       case 'create':
         return (
@@ -827,7 +860,7 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
                             </td>
                             <td className="px-4 py-3">
                               <span className="font-medium text-gray-800">
-                                ${((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)).toFixed(2)}
+                                ₹{((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)).toFixed(2)}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -920,20 +953,20 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Subtotal:</span>
                       <span className="text-lg font-medium text-gray-800">
-                        ${lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0).toFixed(2)}
+                        ₹{lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Tax ({formData.taxPercentage}%):</span>
                       <span className="text-lg font-medium text-gray-800">
-                        ${((lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0) * (parseFloat(formData.taxPercentage) || 0)) / 100).toFixed(2)}
+                        ₹{((lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0) * (parseFloat(formData.taxPercentage) || 0)) / 100).toFixed(2)}
                       </span>
                     </div>
                     <div className="border-t pt-3">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold text-gray-800">Total Amount:</span>
                         <span className="text-2xl font-bold text-[#14B8A6]">
-                          ${(() => {
+                          ₹{(() => {
                             const subtotal = lineItems.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)), 0);
                             const tax = (subtotal * (parseFloat(formData.taxPercentage) || 0)) / 100;
                             return (subtotal + tax).toFixed(2);
@@ -945,32 +978,75 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-4 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => handleSubmitProposal('sent')}
-                    disabled={submitting}
-                    className="px-6 py-3 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50"
-                  >
-                    {submitting ? 'Saving...' : editingProposal ? 'Update & Send' : 'Create & Send'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
-                  >
-                    {submitting ? 'Saving...' : editingProposal ? 'Save Changes' : 'Save as Draft'}
-                  </button>
-                  {editingProposal && (
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      Cancel Edit
-                    </button>
-                  )}
-                </div>
+               
+  <div className="flex gap-4 flex-wrap">
+  <button
+    type="button"
+    onClick={async () => {
+      setSubmitting(true);
+
+      // 1. Submit the proposal as "sent"
+      await handleSubmitProposal('sent');
+
+      // 2. Send email using EmailJS
+      if (formData.clientEmail) {
+        const subtotal = lineItems.reduce(
+          (sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)),
+          0
+        );
+        const tax = (subtotal * parseFloat(formData.taxPercentage || 0)) / 100;
+        const totalAmount = subtotal + tax;
+
+        const templateParams = {
+          client_name: formData.clientName,
+          client_email: formData.clientEmail,
+          proposal_title: formData.title,
+          proposal_description: formData.description,
+          total_amount: totalAmount.toFixed(2),
+        };
+
+        try {
+          await emailjs.send(
+            'service_oo9s9ua',   // Your Service ID
+            'template_cetj34p',  // Your Template ID
+            templateParams,
+            'ClG1MDqYkhkan8_0p'    // Replace with your EmailJS Public Key
+          );
+          alert('Email sent successfully!');
+        } catch (error) {
+          console.error(error);
+          alert('Failed to send email.');
+        }
+      }
+
+      setSubmitting(false);
+    }}
+    disabled={submitting}
+    className="px-6 py-3 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0d9488] transition disabled:opacity-50"
+  >
+    {submitting ? 'Saving...' : editingProposal ? 'Update & Send' : 'Create & Send'}
+  </button>
+
+  <button
+    type="submit"
+    disabled={submitting}
+    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+  >
+    {submitting ? 'Saving...' : editingProposal ? 'Save Changes' : 'Save as Draft'}
+  </button>
+
+  {editingProposal && (
+    <button
+      type="button"
+      onClick={resetForm}
+      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+    >
+      Cancel Edit
+    </button>
+  )}
+</div>
+
+
               </form>
             </div>
           </div>
@@ -1101,7 +1177,7 @@ export default function ConsecQuote({ user, navigate, onLogout, hideBottomNav = 
                       proposals.map((proposal) => {
                         const displayTitle = proposal.title || (proposal.client && proposal.amount ? `${proposal.client} - ${proposal.amount}` : 'Untitled Proposal');
                         const displayClient = proposal.client_name || proposal.client || 'Unknown Client';
-                        const displayAmount = proposal.total_amount ? `$${calculateTotalWithTax(proposal).toLocaleString()}` : (proposal.amount || '$0');
+                        const displayAmount = proposal.total_amount ? `₹${calculateTotalWithTax(proposal).toLocaleString()}` : (proposal.amount || '$0');
                         const displayStatus = proposal.status || 'Draft';
                         const displayDate = proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : (proposal.created || new Date().toLocaleDateString());
                         
