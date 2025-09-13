@@ -11,26 +11,30 @@ export default function Navbar({ setIsAuthModalOpen }) {
       const startPosition = window.pageYOffset;
       const distance = targetPosition - startPosition;
       const duration = Math.abs(distance) > 1000 ? 1200 : 800; // Longer duration for longer distances
-      
+
       let start = null;
-      
+
       const step = (timestamp) => {
         if (!start) start = timestamp;
         const progress = timestamp - start;
         const progressRatio = Math.min(progress / duration, 1);
-        
+
         // Easing function for smoother animation (ease-in-out)
-        const easeInOutCubic = progressRatio < 0.5
-          ? 4 * progressRatio * progressRatio * progressRatio
-          : (progressRatio - 1) * (2 * progressRatio - 2) * (2 * progressRatio - 2) + 1;
-        
-        window.scrollTo(0, startPosition + (distance * easeInOutCubic));
-        
+        const easeInOutCubic =
+          progressRatio < 0.5
+            ? 4 * progressRatio * progressRatio * progressRatio
+            : (progressRatio - 1) *
+                (2 * progressRatio - 2) *
+                (2 * progressRatio - 2) +
+              1;
+
+        window.scrollTo(0, startPosition + distance * easeInOutCubic);
+
         if (progress < duration) {
           window.requestAnimationFrame(step);
         }
       };
-      
+
       window.requestAnimationFrame(step);
       // Close mobile menu after clicking
       setIsOpen(false);
@@ -133,7 +137,6 @@ export default function Navbar({ setIsAuthModalOpen }) {
         </div>
       </div>
 
-
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
@@ -141,7 +144,9 @@ export default function Navbar({ setIsAuthModalOpen }) {
             {navLinks.map((link) => (
               <button
                 key={link}
-                onClick={() => smoothScrollTo(link.toLowerCase().replace(/\s+/g, "-"))}
+                onClick={() =>
+                  smoothScrollTo(link.toLowerCase().replace(/\s+/g, "-"))
+                }
                 className="relative block text-gray-800 font-medium text-base transition-colors hover:text-[#14B8A6] after:absolute after:left-0 after:-bottom-1 after:w-0 after:h-[2px] after:bg-[#14B8A6] after:transition-all hover:after:w-full w-full text-left py-2 px-2 rounded-lg hover:bg-gray-50"
               >
                 {link}
@@ -149,12 +154,13 @@ export default function Navbar({ setIsAuthModalOpen }) {
             ))}
             <div className="pt-4 border-t border-gray-100 mt-4">
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={() => smoothScrollTo("contact")}
-                  className="w-full px-4 py-3 text-base rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition font-medium">
+                  className="w-full px-4 py-3 text-base rounded-2xl text-white bg-[#14B8A6] hover:opacity-90 transition font-medium"
+                >
                   Request Demo
                 </button>
-                <button 
+                <button
                   onClick={() => setIsAuthModalOpen(true)}
                   className="w-full px-4 py-3 text-base rounded-2xl border border-[#14B8A6] text-[#14B8A6] hover:bg-[#14B8A6] hover:text-white transition font-medium"
                 >

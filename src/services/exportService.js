@@ -6,13 +6,13 @@ export const exportService = {
       const doc = new jsPDF();
 
       // Header
-      doc.setFontSize(24);
-      doc.setFont(undefined, 'bold');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(24);
       doc.text('Proposal', 20, 30);
 
       // Proposal details
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'normal');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
       
       let yPos = 50;
       const lineHeight = 8;
@@ -49,7 +49,7 @@ export const exportService = {
       const taxPercentage = proposal.tax_percentage || 0;
       const tax = (totalAmount * taxPercentage) / 100;
       const totalWithTax = totalAmount + tax;
-      doc.text(`$${totalWithTax.toLocaleString()}`, 60, yPos);
+  doc.text(`₹${totalWithTax.toLocaleString('en-IN')}`, 60, yPos);
       yPos += lineHeight;
 
       doc.setFont(undefined, 'bold');
@@ -113,8 +113,8 @@ export const exportService = {
           
           doc.text(doc.splitTextToSize(itemName, 95)[0] || '', 20, yPos);
           doc.text(itemQuantity.toString(), 120, yPos);
-          doc.text(`$${parseFloat(itemRate).toFixed(2)}`, 140, yPos);
-          doc.text(`$${parseFloat(itemTotal).toFixed(2)}`, 170, yPos);
+          doc.text(`₹${parseFloat(itemRate).toLocaleString('en-IN', {minimumFractionDigits:2})}`, 140, yPos);
+          doc.text(`₹${parseFloat(itemTotal).toLocaleString('en-IN', {minimumFractionDigits:2})}`, 170, yPos);
           yPos += lineHeight;
         });
         
@@ -127,17 +127,17 @@ export const exportService = {
         const tax = (subtotal * taxPercentage) / 100;
         const finalTotal = subtotal + tax;
         
-        doc.text('Subtotal:', 140, yPos);
-        doc.text(`$${subtotal.toFixed(2)}`, 170, yPos);
+  doc.text('Subtotal:', 140, yPos);
+  doc.text(`₹${subtotal.toLocaleString('en-IN', {minimumFractionDigits:2})}`, 170, yPos);
         yPos += lineHeight;
         
-        doc.text(`Tax (${taxPercentage}%):`, 140, yPos);
-        doc.text(`$${tax.toFixed(2)}`, 170, yPos);
+  doc.text(`Tax (${taxPercentage}%):`, 140, yPos);
+  doc.text(`₹${tax.toLocaleString('en-IN', {minimumFractionDigits:2})}`, 170, yPos);
         yPos += lineHeight;
         
-        doc.setFont(undefined, 'bold');
-        doc.text('Total:', 140, yPos);
-        doc.text(`$${finalTotal.toFixed(2)}`, 170, yPos);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total:', 140, yPos);
+  doc.text(`₹${finalTotal.toLocaleString('en-IN', {minimumFractionDigits:2})}`, 170, yPos);
         yPos += lineHeight * 2;
       }
 
@@ -173,7 +173,7 @@ export const exportService = {
           yPos += lineHeight;
         }
         if (suggestedPricing) {
-          doc.text(`Suggested Pricing: $${suggestedPricing.toLocaleString()}`, 20, yPos);
+          doc.text(`Suggested Pricing: ₹${suggestedPricing.toLocaleString('en-IN')}`, 20, yPos);
           yPos += lineHeight;
         }
         if (marketAnalysis) {
@@ -442,8 +442,8 @@ export const exportService = {
             user.filesUploaded || 0,
             user.proposalsCreated || 0,
             user.loginSessions || 0,
-            user.totalProposalValue ? `$${user.totalProposalValue.toLocaleString()}` : '$0',
-            user.averageProposalValue ? `$${user.averageProposalValue.toLocaleString()}` : '$0',
+            user.totalProposalValue ? `₹${user.totalProposalValue.toLocaleString()}` : '$0',
+            user.averageProposalValue ? `₹${user.averageProposalValue.toLocaleString()}` : '$0',
             user.totalStorageUsed ? (user.totalStorageUsed / 1024 / 1024).toFixed(2) : '0',
             user.fileCount || 0,
             user.firstActivity ? new Date(user.firstActivity).toLocaleDateString() : 'Never',
@@ -467,19 +467,19 @@ export const exportService = {
             user.role || '',
             user.subscriptionPlan || '',
             user.accountCreated ? new Date(user.accountCreated).toLocaleDateString() : '',
-            user.thisMonthRevenue ? `$${user.thisMonthRevenue.toLocaleString()}` : '$0',
-            user.lastMonthRevenue ? `$${user.lastMonthRevenue.toLocaleString()}` : '$0',
-            user.yearToDateRevenue ? `$${user.yearToDateRevenue.toLocaleString()}` : '$0',
-            user.totalRevenue ? `$${user.totalRevenue.toLocaleString()}` : '$0',
+            user.thisMonthRevenue ? `₹${user.thisMonthRevenue.toLocaleString()}` : '$0',
+            user.lastMonthRevenue ? `₹${user.lastMonthRevenue.toLocaleString()}` : '$0',
+            user.yearToDateRevenue ? `₹${user.yearToDateRevenue.toLocaleString()}` : '$0',
+            user.totalRevenue ? `₹${user.totalRevenue.toLocaleString()}` : '$0',
             user.thisMonthProposals || 0,
             user.lastMonthProposals || 0,
             user.yearToDateProposals || 0,
             user.totalProposals || 0,
-            user.draftRevenue ? `$${user.draftRevenue.toLocaleString()}` : '$0',
-            user.sentRevenue ? `$${user.sentRevenue.toLocaleString()}` : '$0',
-            user.acceptedRevenue ? `$${user.acceptedRevenue.toLocaleString()}` : '$0',
-            user.rejectedRevenue ? `$${user.rejectedRevenue.toLocaleString()}` : '$0',
-            user.averageProposalValue ? `$${user.averageProposalValue.toLocaleString()}` : '$0',
+            user.draftRevenue ? `₹${user.draftRevenue.toLocaleString()}` : '$0',
+            user.sentRevenue ? `₹${user.sentRevenue.toLocaleString()}` : '$0',
+            user.acceptedRevenue ? `₹${user.acceptedRevenue.toLocaleString()}` : '$0',
+            user.rejectedRevenue ? `₹${user.rejectedRevenue.toLocaleString()}` : '$0',
+            user.averageProposalValue ? `₹${user.averageProposalValue.toLocaleString()}` : '$0',
             user.conversionRate ? user.conversionRate.toFixed(1) + '%' : '0%',
             user.monthlyGrowth ? user.monthlyGrowth.toFixed(1) + '%' : '0%',
             user.revenueCategory || 'No Revenue',
@@ -493,7 +493,7 @@ export const exportService = {
           rows = data.map(user => [
             `"${(user.userFullName || '').replace(/"/g, '""')}"`,
             user.userEmail || '',
-            user.monthlyRevenue ? `$${user.monthlyRevenue.toLocaleString()}` : '$0'
+            user.monthlyRevenue ? `₹${user.monthlyRevenue.toLocaleString()}` : '$0'
           ]);
           break;
 
