@@ -502,7 +502,7 @@ After user login:
    - Total Users: 1,234 (↑ 987 active)
    - Storage Used: 2.5 TB of 10 TB  
    - Active Proposals: 89 in progress
-   - Monthly Revenue: $45K (↑ 12% vs last month)
+   - Monthly Revenue: ₹45K (↑ 12% vs last month)
 ```
 
 **System Health Monitoring:**

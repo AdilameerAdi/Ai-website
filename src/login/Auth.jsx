@@ -336,21 +336,70 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   type="button"
   onClick={async () => {
     try {
-      const user = await signInWithGoogle();
-      console.log("Google user:", user);
+      setIsLoading(true);
+      const firebaseUser = await signInWithGoogle();
+      
+      // Check if user exists in Supabase
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', firebaseUser.email)
+        .single();
 
-      // Optional: save user to Supabase `users` table if not already there
-      await supabase.from("users").upsert([
-        {
-          full_name: user.displayName,
-          email: user.email,
+      if (!existingUser) {
+        // User doesn't exist in our database, create a new user
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: firebaseUser.uid, // Use Firebase UID as user ID
+              full_name: firebaseUser.displayName,
+              email: firebaseUser.email,
+              password: 'AUTH_MANAGED', // Since we're using Google Auth
+              role: 'user',
+              subscription_plan: 'free',
+              subscription_status: 'active',
+              storage_used: 0,
+              storage_limit: 5368709120, // 5GB default
+              is_email_verified: firebaseUser.emailVerified,
+              avatar_url: firebaseUser.photoURL || null,
+              auth_provider: 'google'
+            }
+          ])
+          .select()
+          .single();
+
+        if (insertError) {
+          throw new Error('Failed to create user profile: ' + insertError.message);
         }
-      ]);
+        
+        onLoginSuccess(newUser);
+      } else {
+        // User exists, update their information if needed
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            full_name: firebaseUser.displayName,
+            avatar_url: firebaseUser.photoURL,
+            is_email_verified: firebaseUser.emailVerified,
+            last_login: new Date().toISOString()
+          })
+          .eq('email', firebaseUser.email);
 
-      onLoginSuccess(user); // pass back to parent
+        if (updateError) {
+          console.error('Error updating user info:', updateError);
+        }
+
+        onLoginSuccess(existingUser);
+      }
+
+      // Close the modal after successful login
+      onClose();
     } catch (err) {
       console.error("Google login error:", err);
-      setError("Google sign-in failed. Try again.");
+      setError("Google sign-in failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }}
   className="w-full py-3 sm:py-3.5 px-4 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100 transition flex items-center justify-center gap-2 mt-2 text-sm sm:text-base min-h-[44px]"

@@ -185,7 +185,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
         u.user_id,
         u.full_name,
         u.email,
-        `$${u.monthly_revenue.toFixed(2)}`,
+        `₹${u.monthly_revenue.toFixed(2)}`,
       ]),
     ]
       .map((row) => row.join(","))
@@ -587,7 +587,7 @@ const generateSystemPerformance = async () => {
                   Monthly Revenue
                 </h3>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-800 truncate">
-                  $
+                  ₹
                   {stats.monthlyRevenue >= 1000
                     ? `${(stats.monthlyRevenue / 1000).toFixed(1)}K`
                     : stats.monthlyRevenue.toFixed(0)}

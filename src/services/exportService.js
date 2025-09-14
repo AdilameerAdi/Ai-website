@@ -442,7 +442,7 @@ export const exportService = {
             user.filesUploaded || 0,
             user.proposalsCreated || 0,
             user.loginSessions || 0,
-            user.totalProposalValue ? `₹${user.totalProposalValue.toLocaleString()}` : '$0',
+            user.totalProposalValue ? `₹${user.totalProposalValue.toLocaleString()}` : '₹0',
             user.averageProposalValue ? `₹${user.averageProposalValue.toLocaleString()}` : '$0',
             user.totalStorageUsed ? (user.totalStorageUsed / 1024 / 1024).toFixed(2) : '0',
             user.fileCount || 0,
@@ -467,18 +467,18 @@ export const exportService = {
             user.role || '',
             user.subscriptionPlan || '',
             user.accountCreated ? new Date(user.accountCreated).toLocaleDateString() : '',
-            user.thisMonthRevenue ? `₹${user.thisMonthRevenue.toLocaleString()}` : '$0',
-            user.lastMonthRevenue ? `₹${user.lastMonthRevenue.toLocaleString()}` : '$0',
-            user.yearToDateRevenue ? `₹${user.yearToDateRevenue.toLocaleString()}` : '$0',
-            user.totalRevenue ? `₹${user.totalRevenue.toLocaleString()}` : '$0',
+            user.thisMonthRevenue ? `₹${user.thisMonthRevenue.toLocaleString()}` : '₹0',
+            user.lastMonthRevenue ? `₹${user.lastMonthRevenue.toLocaleString()}` : '₹0',
+            user.yearToDateRevenue ? `₹${user.yearToDateRevenue.toLocaleString()}` : '₹0',
+            user.totalRevenue ? `₹${user.totalRevenue.toLocaleString()}` : '₹0',
             user.thisMonthProposals || 0,
             user.lastMonthProposals || 0,
             user.yearToDateProposals || 0,
             user.totalProposals || 0,
-            user.draftRevenue ? `₹${user.draftRevenue.toLocaleString()}` : '$0',
-            user.sentRevenue ? `₹${user.sentRevenue.toLocaleString()}` : '$0',
-            user.acceptedRevenue ? `₹${user.acceptedRevenue.toLocaleString()}` : '$0',
-            user.rejectedRevenue ? `₹${user.rejectedRevenue.toLocaleString()}` : '$0',
+            user.draftRevenue ? `₹${user.draftRevenue.toLocaleString()}` : '₹0',
+            user.sentRevenue ? `₹${user.sentRevenue.toLocaleString()}` : '₹0',
+            user.acceptedRevenue ? `₹${user.acceptedRevenue.toLocaleString()}` : '₹0',
+            user.rejectedRevenue ? `₹${user.rejectedRevenue.toLocaleString()}` : '₹0',
             user.averageProposalValue ? `₹${user.averageProposalValue.toLocaleString()}` : '$0',
             user.conversionRate ? user.conversionRate.toFixed(1) + '%' : '0%',
             user.monthlyGrowth ? user.monthlyGrowth.toFixed(1) + '%' : '0%',
@@ -493,7 +493,7 @@ export const exportService = {
           rows = data.map(user => [
             `"${(user.userFullName || '').replace(/"/g, '""')}"`,
             user.userEmail || '',
-            user.monthlyRevenue ? `₹${user.monthlyRevenue.toLocaleString()}` : '$0'
+            user.monthlyRevenue ? `₹${user.monthlyRevenue.toLocaleString()}` : '₹0'
           ]);
           break;
 

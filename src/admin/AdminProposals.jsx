@@ -145,8 +145,8 @@ export default function AdminProposals({ navigate, onLogout }) {
     setCurrentPage(page);
   };
   
-  const formatCurrency = (amount, currency = 'USD') => {
-    if (!amount) return '$0';
+  const formatCurrency = (amount, currency = 'inr') => {
+    if (!amount) return '₹0';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency
@@ -252,7 +252,7 @@ export default function AdminProposals({ navigate, onLogout }) {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm text-gray-600">January 2024</span>
-                  <span className="text-sm font-semibold text-[#14B8A6]">$245K</span>
+                  <span className="text-sm font-semibold text-[#14B8A6]">₹245K</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div className="bg-[#14B8A6] h-2 rounded-full" style={{ width: '85%' }}></div>
@@ -261,7 +261,7 @@ export default function AdminProposals({ navigate, onLogout }) {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm text-gray-600">December 2023</span>
-                  <span className="text-sm font-semibold text-[#14B8A6]">$189K</span>
+                  <span className="text-sm font-semibold text-[#14B8A6]">₹189K</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div className="bg-[#14B8A6] h-2 rounded-full" style={{ width: '65%' }}></div>
@@ -270,7 +270,7 @@ export default function AdminProposals({ navigate, onLogout }) {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm text-gray-600">November 2023</span>
-                  <span className="text-sm font-semibold text-[#14B8A6]">$312K</span>
+                  <span className="text-sm font-semibold text-[#14B8A6]">₹312K</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div className="bg-[#14B8A6] h-2 rounded-full" style={{ width: '100%' }}></div>

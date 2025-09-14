@@ -27,8 +27,8 @@
 - **Dynamic Win Probability**: Calculated based on actual project factors
 
 **Examples:**
-- **Small Project ($5K)**: "Competitive pricing for small projects" + "Bundle additional features to increase value"
-- **Large Project ($50K+)**: "Large-scale enterprise project premium" + "Consider phased implementation"
+- **Small Project (₹5K)**: "Competitive pricing for small projects" + "Bundle additional features to increase value"
+- **Large Project (₹50K+)**: "Large-scale enterprise project premium" + "Consider phased implementation"
 - **High Complexity**: "Complex requirements increase development time" + "Include technical documentation"
 - **Rush Timeline**: "Expedited delivery requires additional resources" + "Apply rush delivery premium"
 
@@ -126,7 +126,7 @@ const revenue = Math.floor(Math.random() * 20) + 5;
 **Before:** Every proposal → "Consider bundling maintenance services for 15% additional value"
 
 **After:**
-- $50K+ project → "Consider phased implementation to reduce upfront costs"
+- ₹50K+ project → "Consider phased implementation to reduce upfront costs"
 - High complexity → "Include detailed technical documentation in pricing"
 - Rush timeline → "Apply rush delivery premium of 25-40%"
 

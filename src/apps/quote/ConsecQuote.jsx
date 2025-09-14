@@ -621,7 +621,7 @@ const sendEmailToClient = () => {
                   <div>
                     <p className="text-gray-500 text-sm">Total Value</p>
                     <p className="text-3xl font-bold text-[#14B8A6] mt-2">
-                      ${proposalStats.totalValue ? Math.round(proposalStats.totalValue).toLocaleString() : '75K'}
+                      ₹{proposalStats.totalValue ? Math.round(proposalStats.totalValue).toLocaleString() : '75K'}
                     </p>
                   </div>
                   <FaChartBar className="text-4xl text-[#14B8A6] opacity-20" />
@@ -659,7 +659,7 @@ const sendEmailToClient = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-3xl font-bold text-green-600">
-                    ${proposals.reduce((sum, p) => {
+                    ₹{proposals.reduce((sum, p) => {
                       const suggestedPrice = p.ai_suggested_price || aiAnalysis[p.id]?.suggestedPricing || getConsistentAIData(p).suggestedPricing;
                       return sum + suggestedPrice;
                     }, 0).toLocaleString()}
@@ -1211,7 +1211,7 @@ const sendEmailToClient = () => {
                       proposals.map((proposal) => {
                         const displayTitle = proposal.title || (proposal.client && proposal.amount ? `${proposal.client} - ${proposal.amount}` : 'Untitled Proposal');
                         const displayClient = proposal.client_name || proposal.client || 'Unknown Client';
-                        const displayAmount = proposal.total_amount ? `₹${calculateTotalWithTax(proposal).toLocaleString()}` : (proposal.amount || '$0');
+                        const displayAmount = proposal.total_amount ? `₹${calculateTotalWithTax(proposal).toLocaleString()}` : (proposal.amount || '₹0');
                         const displayStatus = proposal.status || 'Draft';
                         const displayDate = proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : (proposal.created || new Date().toLocaleDateString());
                         
@@ -1361,7 +1361,7 @@ const sendEmailToClient = () => {
                     <div>
                       <p className="text-sm text-gray-600">Total Value</p>
                       <p className="text-2xl font-bold text-green-600">
-                        ${proposalStats.totalValue ? Math.round(proposalStats.totalValue).toLocaleString() : '0'}
+                        ₹{proposalStats.totalValue ? Math.round(proposalStats.totalValue).toLocaleString() : '0'}
                       </p>
                     </div>
                     <FaChartBar className="text-3xl text-green-600 opacity-20" />
@@ -1370,7 +1370,7 @@ const sendEmailToClient = () => {
                     <div>
                       <p className="text-sm text-gray-600">Approved Value</p>
                       <p className="text-2xl font-bold text-blue-600">
-                        ${proposalStats.approvedValue ? Math.round(proposalStats.approvedValue).toLocaleString() : '0'}
+                        ₹{proposalStats.approvedValue ? Math.round(proposalStats.approvedValue).toLocaleString() : '0'}
                       </p>
                     </div>
                     <FaFileAlt className="text-3xl text-blue-600 opacity-20" />
@@ -1379,7 +1379,7 @@ const sendEmailToClient = () => {
                     <div>
                       <p className="text-sm text-gray-600">Average Value</p>
                       <p className="text-2xl font-bold text-yellow-600">
-                        ${proposalStats.averageValue ? Math.round(proposalStats.averageValue).toLocaleString() : '0'}
+                        ₹{proposalStats.averageValue ? Math.round(proposalStats.averageValue).toLocaleString() : '0'}
                       </p>
                     </div>
                     <FaLightbulb className="text-3xl text-yellow-600 opacity-20" />
@@ -1500,7 +1500,7 @@ const sendEmailToClient = () => {
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-2xl text-[#14B8A6]">
-                    {selectedProposal.total_amount ? `$${calculateTotalWithTax(selectedProposal).toLocaleString()}` : selectedProposal.amount}
+                    {selectedProposal.total_amount ? `₹${calculateTotalWithTax(selectedProposal).toLocaleString()}` : selectedProposal.amount}
                   </p>
                 </div>
               </div>

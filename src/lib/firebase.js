@@ -20,9 +20,24 @@ export const googleProvider = new GoogleAuthProvider();
 // Helper function for Google login
 export const signInWithGoogle = async () => {
   try {
+    // Configure Google provider
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
     const result = await signInWithPopup(auth, googleProvider);
     return result.user; // returns user info
   } catch (error) {
+    if (error.code === 'auth/popup-blocked') {
+      // If popup is blocked, try redirect method instead
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        // The redirect result will be handled by the getRedirectResult() in the component
+        return null;
+      } catch (redirectError) {
+        throw new Error('Failed to sign in with redirect: ' + redirectError.message);
+      }
+    }
     throw error;
   }
 };
